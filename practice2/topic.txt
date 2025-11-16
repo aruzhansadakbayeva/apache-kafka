@@ -1,0 +1,20 @@
+go run main.go localhost:9094 my_topic3 3 2
+
+go get github.com/confluentinc/confluent-kafka-go/schemaregistry
+go get github.com/confluentinc/confluent-kafka-go/schemaregistry/serde
+go get github.com/confluentinc/confluent-kafka-go/schemaregistry/serde/protobuf
+go mod tidy
+
+
+go get google.golang.org/protobuf
+go get google.golang.org/protobuf/proto
+go mod tidy
+
+
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+export PATH="$PATH:$(go env GOPATH)/bin"
+which protoc-gen-go
+protoc --go_out=. --go_opt=paths=source_relative order.proto
+
+
+docker compose up --build

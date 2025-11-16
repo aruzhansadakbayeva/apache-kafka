@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package practice2;
+
+option go_package = "github.com/aruzhansadakbayeva/apache-kafka/practice2";
+
+
+message Item {
+    string product_id = 1 [json_name = "product_id"];
+    int32 quantity = 2 [json_name = "quantity"];
+    double price = 3 [json_name = "price"];
+}
+
+
+message Order {
+    string order_id = 1 [json_name = "order_id"];
+    string user_id = 2 [json_name = "user_id"];
+    repeated Item items = 3 [json_name = "items"];
+    double total_price = 4 [json_name = "total_price"];
+}
