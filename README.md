@@ -2,7 +2,7 @@
 Для топика (шаг 1) создала отдельную папку/проект - practice2-topic
 
 Шаги 2-4 (practice2):
-Для запуска всего приложения в двух экземплярах, создала Dockerfile и прописала конфигурации в docker-compose.yaml
+Для запуска всего приложения в двух экземплярах, создала Dockerfile и прописала конфигурации в docker-compose.yml
 
 Понадобились установки:
 go get github.com/confluentinc/confluent-kafka-go/schemaregistry
