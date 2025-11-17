@@ -1,0 +1,12 @@
+go mod init topic
+
+go mod tidy
+
+docker compose up -d
+
+go run main.go localhost:9094 mytopic2 3 2
+
+output: 
+Топик 'mytopic2' успешно создан!
+  Количество партиций: 3
+  Репликация: 2
