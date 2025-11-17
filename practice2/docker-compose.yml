@@ -41,7 +41,7 @@ services:
       - kafka-0
       - kafka-1
     deploy:
-      replicas: 2 // запускаю приложение в двух экзмеплярах
+      replicas: 2 
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka-0:9094,kafka-1:9094
       - TOPIC=my_topic4
