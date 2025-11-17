@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package order;
+
+// Укажи путь для Go-модуля (замени на реальный путь в твоём go.mod)
+option go_package = "github.com/aruzhansadakbayeva/apache-kafkapb";
+message Item {
+  string product_id = 1;
+  int32 quantity = 2;
+  double price = 3;
+}
+
+message Order {
+  string order_id = 1;
+  string user_id = 2;
+  repeated Item items = 3;
+  double total_price = 4;
+}
