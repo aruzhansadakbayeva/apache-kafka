@@ -15,11 +15,10 @@ import (
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
-
 func runProducer(bootstrap string, topic string) {
 
 	// Конфигурация для Schema Registry
-	srClient, err := schemaregistry.NewClient(schemaregistry.NewConfig("http://localhost:8081"))
+	srClient, err := schemaregistry.NewClient(schemaregistry.NewConfig("http://schema-registry:8081"))
 	if err != nil {
 		log.Fatalf("Ошибка при создании клиента Schema Registry: %v", err)
 	}
@@ -65,7 +64,7 @@ func runProducer(bootstrap string, topic string) {
 			},
 			TotalPrice: 400,
 		}
-		payload, _ := serializer.Serialize(topic, &order) // сериализую прото сообщение в байты
+		payload, _ := serializer.Serialize(topic, &order)    // сериализую прото сообщение в байты
 		fmt.Printf("[Producer] Sending order: %+v\n", order) //вывожу в консоль: [Producer] Sending order: {state:{NoUnkeyedLiterals:{} DoNotCompare:[] DoNotCopy:[] atomicMessageInfo:0xc000146170} OrderId:0031 UserId:u001 Items:[product_id:"P1"  quantity:2  price:100 product_id:"P2"  quantity:1  price:200] TotalPrice:400 unknownFields:[] sizeCache:0}
 		p.Produce(&kafka.Message{
 			TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
@@ -77,11 +76,10 @@ func runProducer(bootstrap string, topic string) {
 	close(deliveryChan)
 }
 
-
 func runSingleConsumer(bootstrap string, topic string, group string) {
 
 	// Конфигурация для Schema Registry
-	srClient, err := schemaregistry.NewClient(schemaregistry.NewConfig("http://localhost:8081"))
+	srClient, err := schemaregistry.NewClient(schemaregistry.NewConfig("http://schema-registry:8081"))
 	if err != nil {
 		log.Fatalf("Ошибка при создании клиента Schema Registry: %v", err)
 	}
@@ -134,10 +132,9 @@ func runSingleConsumer(bootstrap string, topic string, group string) {
 	}
 }
 
-
 func runBatchConsumer(bootstrap string, topic string, group string, batchSize int) {
 	// Конфигурация для Schema Registry
-	srClient, err := schemaregistry.NewClient(schemaregistry.NewConfig("http://localhost:8081"))
+	srClient, err := schemaregistry.NewClient(schemaregistry.NewConfig("http://schema-registry:8081"))
 	if err != nil {
 		log.Fatalf("Ошибка при создании клиента Schema Registry: %v", err)
 	}
