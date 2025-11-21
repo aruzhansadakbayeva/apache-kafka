@@ -9,7 +9,7 @@ go get github.com/confluentinc/confluent-kafka-go/schemaregistry
 go get github.com/confluentinc/confluent-kafka-go/schemaregistry/serde
 go get github.com/confluentinc/confluent-kafka-go/schemaregistry/serde/protobuf
 
-Установки и команды для работы с Proto (такие же структуры Order и Item как в примерах курса, см.order.proto и сгенерированный orderpb/order.pb.go - с отправкой сообщения и сериализацией все получилось, а вот при корректной десериализации возникли проблемы, описала ошибку в функциях консьюмеров в комментариях файла main.go):
+Установки и команды для работы с Proto (такие же структуры Order и Item как в примерах курса, см.order.proto и сгенерированный orderpb/order.pb.go - с отправкой сообщения и сериализацией все получилось, а вот при корректной десериализации возникли проблемы, описала ошибку в функциях консьюмеров в комментариях файла main.go [Проблема решена, поменяла url на "http://schema-registry:8081"]):
 
 go get google.golang.org/protobuf
 go get google.golang.org/protobuf/proto
