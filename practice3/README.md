@@ -10,4 +10,5 @@ docker exec -it practice3-kafka-0-1 /opt/bitnami/kafka/bin/kafka-topics.sh --cre
 
 
 go build -o chat-filter.exe main.go
+
 .\chat-filter.exe
