@@ -13,9 +13,7 @@ import (
 	"github.com/lovoo/goka"
 )
 
-// ----------------------
 // Структуры данных
-// ----------------------
 
 type Message struct {
 	FromUserID int64  `json:"from_user_id"`
@@ -39,9 +37,7 @@ type CensoredMessage struct {
 	Text       string `json:"text"`
 }
 
-// ----------------------
 // JsonCodec для Goka
-// ----------------------
 
 type JsonCodec[T any] struct{}
 
@@ -60,9 +56,7 @@ func (jc JsonCodec[T]) Decode(data []byte) (interface{}, error) {
 	return t, nil
 }
 
-// ----------------------
 // Константы топиков и групп
-// ----------------------
 
 var (
 	brokers = []string{"localhost:9094", "localhost:9095"}
@@ -74,9 +68,7 @@ var (
 	groupMessageFilter goka.Group = "message-filter-group"
 )
 
-// ----------------------
 // Цензура
-// ----------------------
 
 var forbiddenWords = []string{"badword", "curse", "spam"}
 
@@ -87,9 +79,8 @@ func censorMessage(text string) string {
 	return text
 }
 
-// ----------------------
 // Глобальный список заблокированных пользователей
-// ----------------------
+
 
 var blockedUsersGlobal = struct {
 	users map[int64]map[int64]UserBlock
@@ -97,9 +88,7 @@ var blockedUsersGlobal = struct {
 	users: map[int64]map[int64]UserBlock{},
 }
 
-// ----------------------
 // Проверка блокировки между конкретными пользователями
-// ----------------------
 
 func isBlocked(from, to int64) bool {
 	toMap, ok := blockedUsersGlobal.users[from]
@@ -124,9 +113,8 @@ func isBlocked(from, to int64) bool {
 	return true
 }
 
-// ----------------------
 // Процессор сообщений и блокировок
-// ----------------------
+
 
 func messageFilterProcessor() {
 	processFunc := func(ctx goka.Context, msg interface{}) {
@@ -174,9 +162,7 @@ func messageFilterProcessor() {
 	}
 }
 
-// ----------------------
 // Эмиттер сообщений
-// ----------------------
 
 func messageEmitter() {
 	e, err := goka.NewEmitter(brokers, topicMessages, new(JsonCodec[Message]))
@@ -197,9 +183,8 @@ func messageEmitter() {
 	}
 }
 
-// ----------------------
 // Эмиттер списка блокировок
-// ----------------------
+
 
 func blockedUsersEmitter() {
 	e, err := goka.NewEmitter(brokers, topicBlockedUsers, new(JsonCodec[BlockedUsers]))
@@ -221,9 +206,6 @@ func blockedUsersEmitter() {
 	}
 }
 
-// ----------------------
-// main
-// ----------------------
 
 func main() {
 	go messageEmitter()
