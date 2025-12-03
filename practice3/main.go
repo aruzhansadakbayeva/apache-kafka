@@ -143,7 +143,7 @@ func messageFilterProcessor() {
 					blockedUsersGlobal.users[from][to] = block
 				}
 			}
-			log.Printf("[BLOCKED] Обновлён список заблокированных пользователей: %+v", blockedUsersGlobal.users)
+			log.Printf("[BLOCKED] Обновлён список заблокированных пользователей : %+v", blockedUsersGlobal.users)
 		}
 	}
 
