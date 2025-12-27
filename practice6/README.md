@@ -3,7 +3,7 @@ chmod +x generate-certs.sh
 
 docker compose up -d
 
-В certs/kafka-1 добавила admin.properties
+В certs/kafka-1 добавила admin.properties, producer.properties и consumer.properties
 
 docker exec -it ksecurity-kafka-1-1 bash
 
