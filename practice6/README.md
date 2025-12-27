@@ -37,13 +37,14 @@ kafka-acls \
   --topic topic-1
 
 
-  kafka-acls \
+kafka-acls \
   --bootstrap-server kafka-1:1092 \
   --command-config /etc/kafka/secrets/admin.properties \
   --add \
   --allow-principal User:consumer \
   --operation Read \
-  --topic topic-1
+  --group '*'
+
 
 
 kafka-acls \
@@ -69,4 +70,28 @@ Current ACLs for resource `ResourcePattern(resourceType=TOPIC, name=topic-1, pat
         (principal=User:consumer, host=*, operation=READ, permissionType=ALLOW)
         (principal=User:producer, host=*, operation=WRITE, permissionType=ALLOW) 
 
+# Тест 1 - записала сообщение hello в topic-1
+kafka-console-producer \
+  --bootstrap-server kafka-1:1092 \
+  --producer.config /etc/kafka/secrets/producer.properties \
+  --topic topic-1
 
+# получила сообщение hello
+kafka-console-consumer \
+  --bootstrap-server kafka-1:1092 \
+  --consumer.config /etc/kafka/secrets/consumer.properties \
+  --topic topic-1 \
+  --from-beginning
+
+# Тест 2 - записала сообщение hello в topic-2
+kafka-console-producer \
+  --bootstrap-server kafka-1:1092 \
+  --producer.config /etc/kafka/secrets/producer.properties \
+  --topic topic-2
+
+# на чтение прав нет
+kafka-console-consumer \
+  --bootstrap-server kafka-1:1092 \
+  --consumer.config /etc/kafka/secrets/consumer.properties \
+  --topic topic-2 \
+  --from-beginning
