@@ -72,3 +72,37 @@ saruj@compute-vm-2-2-18-hdd-1767608579163:/$ kcat -C \
 % Reached end of topic orders [2] at offset 0
 
 
+saruj@compute-vm-2-2-18-hdd-1767608579163:~$ echo "test message" | kcat -P \
+    -b kz1-a-59d8gnlt4r1cl0ev.mdb.yandexcloud.kz:9091 \
+    -t orders \
+    -k key \
+    -X security.protocol=SASL_SSL \
+    -X sasl.mechanism=SCRAM-SHA-512 \
+    -X sasl.username="user" \
+    -X sasl.password="12345678" \
+    -X ssl.ca.location=/usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt -Z
+saruj@compute-vm-2-2-18-hdd-1767608579163:~$ echo "test message" | kcat -P \
+    -b kz1-a-59d8gnlt4r1cl0ev.mdb.yandexcloud.kz:9091 \
+    -t orders \
+    -k key \
+    -X security.protocol=SASL_SSL \
+    -X sasl.mechanism=SCRAM-SHA-512 \
+    -X sasl.username="user" \
+    -X sasl.password="12345678" \
+    -X ssl.ca.location=/usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt -Z
+
+saruj@compute-vm-2-2-18-hdd-1767608579163:/$ kcat -C \
+         -b kz1-a-59d8gnlt4r1cl0ev.mdb.yandexcloud.kz:9091 \
+         -t orders \
+         -X security.protocol=SASL_SSL \
+         -X sasl.mechanism=SCRAM-SHA-512 \
+         -X sasl.username="user" \
+         -X sasl.password="12345678" \
+         -X ssl.ca.location=/usr/local/share/ca-certificates/Yandex/YandexInternalRootCA.crt -Z -K:
+% Reached end of topic orders [0] at offset 0
+% Reached end of topic orders [1] at offset 0
+% Reached end of topic orders [2] at offset 0
+key:test message
+% Reached end of topic orders [1] at offset 1
+key:test message
+% Reached end of topic orders [1] at offset 2
