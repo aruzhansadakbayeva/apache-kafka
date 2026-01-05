@@ -106,3 +106,21 @@ key:test message
 % Reached end of topic orders [1] at offset 1
 key:test message
 % Reached end of topic orders [1] at offset 2
+
+
+saruj@compute-vm-2-2-18-hdd-1767608579163:~$ kcat -L \
+-b kz1-a-59d8gnlt4r1cl0ev.mdb.yandexcloud.kz:9091 \
+-X security.protocol=SASL_SSL \
+-X sasl.mechanism=SCRAM-SHA-512 \
+-X sasl.username="user" \
+-X sasl.password="12345678"
+Metadata for all topics (from broker 2: sasl_ssl://kz1-a-59d8gnlt4r1cl0ev.mdb.yandexcloud.kz:9091/2):
+ 3 brokers:
+  broker 1 at kz1-a-t68lfu2hsqgu0dlr.mdb.yandexcloud.kz:9091
+  broker 2 at kz1-a-59d8gnlt4r1cl0ev.mdb.yandexcloud.kz:9091
+  broker 3 at kz1-a-7qql2atg1crincnu.mdb.yandexcloud.kz:9091 (controller)
+ 1 topics:
+  topic "orders" with 3 partitions:
+    partition 0, leader 2, replicas: 2,3,1, isrs: 2,3,1
+    partition 1, leader 3, replicas: 3,1,2, isrs: 3,1,2
+    partition 2, leader 1, replicas: 1,2,3, isrs: 1,2,3
