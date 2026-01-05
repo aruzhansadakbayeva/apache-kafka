@@ -124,3 +124,18 @@ Metadata for all topics (from broker 2: sasl_ssl://kz1-a-59d8gnlt4r1cl0ev.mdb.ya
     partition 0, leader 2, replicas: 2,3,1, isrs: 2,3,1
     partition 1, leader 3, replicas: 3,1,2, isrs: 3,1,2
     partition 2, leader 1, replicas: 1,2,3, isrs: 1,2,3
+
+
+
+    -NiFi
+
+    saruj@compute-vm-2-2-18-hdd-1767608579163:/opt/nifi/nifi-1.25.0$ sudo -u nifi ./bin/nifi.sh status
+\nifi.sh: JAVA_HOME not set; results may vary
+
+Java home: 
+NiFi home: /opt/nifi/nifi-1.25.0
+
+Bootstrap Config File: /opt/nifi/nifi-1.25.0/conf/bootstrap.conf
+
+
+2026-01-05 16:44:40,108 INFO [main] org.apache.nifi.bootstrap.Command Apache NiFi is currently running, listening to Bootstrap on port 44901, PID=31587
