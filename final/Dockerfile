@@ -1,5 +1,6 @@
 FROM golang:latest
 
+
 WORKDIR /app
 COPY shop/main.go .
 COPY shop/products.json .
