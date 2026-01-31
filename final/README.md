@@ -37,21 +37,6 @@ kafka-topics \
   --config min.insync.replicas=2
 
 
-kafka-topics \
-  --bootstrap-server kafka-1:1092 \
-  --command-config /etc/kafka/secrets/admin.properties \
-  --create \
-  --if-not-exists \
-  --topic cart-topic \
-  --partitions 3 \
-  --replication-factor 3 \
-  --config min.insync.replicas=2
-
-kafka-console-producer \
-  --bootstrap-server kafka-1:1092 \
-  --producer.config /etc/kafka/secrets/admin.properties \
-  --producer-property acks=all \
-  --topic products-topic
 
 
 kafka-acls \
@@ -73,14 +58,6 @@ kafka-acls \
 
 
 
-kafka-acls \
-  --bootstrap-server kafka-1:1092 \
-  --command-config /etc/kafka/secrets/admin.properties \
-  --add \
-  --allow-principal User:customer-producer \
-  --operation Write \
-  --topic cart-topic
-
 
 kafka-acls \
   --bootstrap-server kafka-1:1092 \
@@ -96,20 +73,64 @@ Current ACLs for resource `ResourcePattern(resourceType=TOPIC, name=products-top
         (principal=User:consumer, host=*, operation=READ, permissionType=ALLOW)
         (principal=User:producer, host=*, operation=WRITE, permissionType=ALLOW) 
 
-# Тест 1 - записала сообщение hello в topic-1
-kafka-console-producer \
-  --bootstrap-server kafka-1:1092 \
-  --producer.config /etc/kafka/secrets/admin.properties \
-  --topic products-topic
 
-# получила сообщение hello
+# Запустила 
+docker compose up --build producer
+
+# Тест - получила сообщение из products.json
 kafka-console-consumer \
   --bootstrap-server kafka-1:1092 \
   --consumer.config /etc/kafka/secrets/admin.properties \
   --topic products-topic \
   --from-beginning
 
-# Тест 2 - записала сообщение hello в topic-2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+kafka-topics \
+  --bootstrap-server kafka-1:1092 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --create \
+  --if-not-exists \
+  --topic cart-topic \
+  --partitions 3 \
+  --replication-factor 3 \
+  --config min.insync.replicas=2
+
+kafka-console-producer \
+  --bootstrap-server kafka-1:1092 \
+  --producer.config /etc/kafka/secrets/admin.properties \
+  --producer-property acks=all \
+  --topic products-topic
+
+  kafka-acls \
+  --bootstrap-server kafka-1:1092 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --add \
+  --allow-principal User:customer-producer \
+  --operation Write \
+  --topic cart-topic
+
+
+  # Тест 1 - записала сообщение hello в topic-1
+kafka-console-producer \
+  --bootstrap-server kafka-1:1092 \
+  --producer.config /etc/kafka/secrets/admin.properties \
+  --topic products-topic
+
+  # Тест 2 - записала сообщение hello в topic-2
 kafka-console-producer \
   --bootstrap-server kafka-1:1092 \
   --producer.config /etc/kafka/secrets/admin.properties \
@@ -121,10 +142,3 @@ kafka-console-consumer \
   --consumer.config /etc/kafka/secrets/admin.properties \
   --topic cart-topic \
   --from-beginning
-
-
-
-
-
-
-docker compose up --build producer

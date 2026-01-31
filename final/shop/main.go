@@ -100,6 +100,6 @@ func createTLSConfig(truststorePath string) (*tls.Config, error) {
 
 	return &tls.Config{
 		RootCAs:            certPool,
-		InsecureSkipVerify: true, // для учебного проекта
+		InsecureSkipVerify: true, 
 	}, nil
 }
