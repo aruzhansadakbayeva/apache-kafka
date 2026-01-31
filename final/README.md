@@ -150,6 +150,7 @@ curl -X GET "http://localhost:9200/products-topic/_search?pretty" -H 'Content-Ty
   }
 }
 '
+вывод:
 {
   "took" : 3,
   "timed_out" : false,
