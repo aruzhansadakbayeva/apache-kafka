@@ -1,0 +1,17 @@
+{
+  "name": "elasticsearch-sink",
+  "connector.class": "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
+  "tasks.max": "1",
+  "topics": "products-topic",
+
+  "connection.url": "http://elasticsearch:9200",
+  "type.name": "_doc",
+  "key.ignore": "true",
+  "schema.ignore": "true",
+
+  "transforms": "ExtractField",
+  "transforms.ExtractField.type": "org.apache.kafka.connect.transforms.ExtractField$Value",
+  "transforms.ExtractField.field": "name",
+
+  "behavior.on.null.values": "ignore"
+}

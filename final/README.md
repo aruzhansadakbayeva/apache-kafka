@@ -77,6 +77,8 @@ Current ACLs for resource `ResourcePattern(resourceType=TOPIC, name=products-top
 # Запустила 
 docker compose up --build producer
 
+docker exec -it final-kafka-1-1 bash
+
 # Тест - получила сообщение из products.json
 kafka-console-consumer \
   --bootstrap-server kafka-1:1092 \
@@ -85,6 +87,14 @@ kafka-console-consumer \
   --from-beginning
 
 
+
+
+kafka-console-consumer \
+  --bootstrap-server kafka-1:1092 \
+  --consumer.config /etc/kafka/secrets/admin.properties \
+  --topic products-topic \
+  --from-beginning \
+  --timeout-ms 10000 | jq 'select(.name=="Умные часы XYZ")'
 
 
 
