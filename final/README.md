@@ -37,6 +37,15 @@ kafka-topics \
   --config min.insync.replicas=2
 
 
+kafka-topics \
+  --bootstrap-server kafka-1:1092 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --create \
+  --if-not-exists \
+  --topic cart-topic \
+  --partitions 3 \
+  --replication-factor 3 \
+  --config min.insync.replicas=2
 
 
 
@@ -54,6 +63,15 @@ kafka-acls \
   --bootstrap-server kafka-1:1092 \
   --command-config /etc/kafka/secrets/admin.properties \
   --add \
+  --allow-principal User:producer \
+  --operation Write \
+  --topic cart-topic
+
+
+kafka-acls \
+  --bootstrap-server kafka-1:1092 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --add \
   --allow-principal User:consumer \
   --operation Read \
   --group '*'
@@ -63,6 +81,11 @@ kafka-acls \
   --bootstrap-server kafka-1:1092 \
   --command-config /etc/kafka/secrets/admin.properties \
   --add --allow-principal User:admin --operation Read --topic products-topic
+
+kafka-acls \
+  --bootstrap-server kafka-1:1092 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --add --allow-principal User:admin --operation Read --topic cart-topic
 
 
 
@@ -95,6 +118,11 @@ kafka-console-consumer \
   --from-beginning
 
 
+kafka-console-consumer \
+  --bootstrap-server kafka-1:1092 \
+  --consumer.config /etc/kafka/secrets/admin.properties \
+  --topic cart-topic \
+  --from-beginning
 
 
 kafka-console-consumer \
@@ -329,6 +357,7 @@ kafka-console-consumer \
 
 
 docker exec -it final-kafka-1-1 bash
+
 kafka-acls \
   --bootstrap-server kafka-1:1092 \
   --command-config /etc/kafka/secrets/admin.properties \
@@ -336,6 +365,15 @@ kafka-acls \
   --allow-principal User:consumer \
   --operation Read \
   --topic products-topic \
+  --group mirror-maker-group
+
+kafka-acls \
+  --bootstrap-server kafka-1:1092 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --add \
+  --allow-principal User:consumer \
+  --operation Read \
+  --topic cart-topic \
   --group mirror-maker-group
 
 
@@ -358,11 +396,26 @@ kafka-acls \
   --operation Create \
   --topic products-topic
 
+kafka-acls \
+  --bootstrap-server kafka-destination:1096 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --add \
+  --allow-principal User:mirrormaker \
+  --operation Write \
+  --operation Create \
+  --topic cart-topic
+
 
 kafka-acls \
   --bootstrap-server kafka-destination:1096 \
   --command-config /etc/kafka/secrets/admin.properties \
   --add --allow-principal User:admin --operation Read --topic products-topic
+
+
+kafka-acls \
+  --bootstrap-server kafka-destination:1096 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --add --allow-principal User:admin --operation Read --topic cart-topic
 
 
 
@@ -382,10 +435,22 @@ kafka-acls \
   --list
 
 
+
+docker restart mirror-maker
+
+docker exec -it kafka-destination bash
+
 kafka-console-consumer \
   --bootstrap-server kafka-destination:1096 \
   --consumer.config /etc/kafka/secrets/admin.properties \
   --topic products-topic \
+  --from-beginning
+
+
+kafka-console-consumer \
+  --bootstrap-server kafka-destination:1096 \
+  --consumer.config /etc/kafka/secrets/admin.properties \
+  --topic cart-topic \
   --from-beginning
 
 

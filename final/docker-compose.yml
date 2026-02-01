@@ -333,7 +333,7 @@ services:
        echo 'ssl.truststore.password=password' >> /tmp/producer.properties &&
        echo 'ssl.endpoint.identification.algorithm=' >> /tmp/producer.properties &&
 
-       kafka-mirror-maker --consumer.config /tmp/consumer.properties --producer.config /tmp/producer.properties --whitelist 'products-topic' --num.streams 1
+       kafka-mirror-maker --consumer.config /tmp/consumer.properties --producer.config /tmp/producer.properties --whitelist '.*' --num.streams 1
      "
 
 
