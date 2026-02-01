@@ -462,6 +462,13 @@ kafka-topics \
   --partitions 3 \
   --replication-factor 1
 
+
+  kafka-console-consumer \
+  --bootstrap-server kafka-destination:1096 \
+  --consumer.config /etc/kafka/secrets/admin.properties \
+  --topic recommendations-topic \
+  --from-beginning
+
  
 
 
@@ -568,6 +575,38 @@ root@db631664309a:/# hdfs dfs -cat /data/reco/dt=latest/part-* 2>/dev/null | hea
 
 
 Проверить, что рекомендации улетели в Kafka (recommendations-topic)
+
+@aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ docker exec -it kafka-destination bash -lc '
+kafka-topics \
+  --bootstrap-server kafka-destination:1096 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --describe --topic recommendations-topic
+'
+Topic: recommendations-topic    TopicId: FcZcecWGRCSTKYVyJlH1uA PartitionCount: 3       ReplicationFactor: 1    Configs: 
+        Topic: recommendations-topic    Partition: 0    Leader: 1       Replicas: 1     Isr: 1
+        Topic: recommendations-topic    Partition: 1    Leader: 1       Replicas: 1     Isr: 1
+        Topic: recommendations-topic    Partition: 2    Leader: 1       Replicas: 1     Isr: 1
+
+@aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ docker exec -it kafka-destination bash -lc '
+kafka-run-class kafka.tools.GetOffsetShell \
+  --broker-list kafka-destination:1096 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --topic recommendations-topic --time -1
+'
+recommendations-topic:0:0
+recommendations-topic:1:0
+recommendations-topic:2:0
+
+
+docker exec -it kafka-destination bash -lc '
+kafka-console-consumer \
+  --bootstrap-server kafka-destination:1096 \
+  --consumer.config /etc/kafka/secrets/admin.properties \
+  --topic recommendations-topic \
+  --from-beginning \
+  --timeout-ms 5000
+'
+
 
 
 
