@@ -299,9 +299,6 @@ services:
 
 
 
-
-
-
   mirror-maker:
     image: confluentinc/cp-kafka:7.4.4
     container_name: mirror-maker
@@ -338,11 +335,104 @@ services:
 
 
 
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    environment:
+      - CLUSTER_NAME=analytics
+    ports:
+      - "9870:9870"   # NameNode UI
+      - "8020:8020"   # HDFS
+    volumes:
+      - namenode:/hadoop/dfs/name
+
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode
+    environment:
+      - CLUSTER_NAME=analytics
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+    depends_on:
+      - namenode
+    ports:
+      - "9864:9864"
+    volumes:
+      - datanode:/hadoop/dfs/data
+
+
+  spark-master:
+    image: bde2020/spark-master:3.3.0-hadoop3.3
+    container_name: spark-master
+    hostname: spark-master
+    environment:
+      - SPARK_MASTER_HOST=spark-master
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8080
+    volumes:
+    - ./analytics:/opt/analytics
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+
+  spark-worker:
+    image: bde2020/spark-worker:3.3.0-hadoop3.3
+    container_name: spark-worker
+    hostname: spark-worker
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=1g
+    depends_on:
+      - spark-master
+
+
+    
+
+
+
+  ingestor:
+    build: ./analytics
+    container_name: ingestor
+    command: ["/app/ingestor"]
+    environment:
+      KAFKA_BROKERS: kafka-destination:1096
+      KAFKA_TOPIC: cart-topic
+      KAFKA_GROUP: cart-to-hdfs
+
+      HDFS_ADDR: namenode:8020
+      HDFS_DIR: /data/cart
+
+      KAFKA_SASL_USER: admin
+      KAFKA_SASL_PASS: admin-secret
+    depends_on:
+      - kafka-destination
+      - namenode
+
+
+
+  publisher:
+    build: ./analytics
+    container_name: publisher
+    command: ["/app/publisher"]
+    environment:
+      KAFKA_BROKERS: kafka-destination:1096
+      KAFKA_OUT_TOPIC: recommendations-topic
+
+      HDFS_ADDR: namenode:8020
+      HDFS_RECO_DIR: /data/reco/dt=latest
+
+      KAFKA_SASL_USER: admin
+      KAFKA_SASL_PASS: admin-secret
+    depends_on:
+      - kafka-destination
+      - namenode
 
 
 volumes:
   kafka_source_data:
   kafka_dest_data:
+  namenode:
+  datanode:
 
 
 networks:

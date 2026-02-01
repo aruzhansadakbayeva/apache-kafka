@@ -454,15 +454,21 @@ kafka-console-consumer \
   --from-beginning
 
 
+kafka-topics \
+  --bootstrap-server kafka-destination:1096 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --create --if-not-exists \
+  --topic recommendations-topic \
+  --partitions 3 \
+  --replication-factor 1
+
+ 
 
 
-  в certs/kafka-destination добавила admin.properties:
-  security.protocol=SASL_SSL
-  sasl.mechanism=PLAIN
-  sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required \
-   username="admin" password="admin-secret";
-  ssl.truststore.location=/etc/kafka/secrets/kafka.truststore.jks
-  ssl.truststore.password=password
+
+
+
+  в certs/kafka-destination добавила admin.properties
 
 и kafka_server_jaas.conf:
 KafkaServer {
@@ -472,3 +478,97 @@ KafkaServer {
   user_admin="admin-secret"
   user_mirrormaker="mm-secret";
 };
+
+
+
+
+
+go mod init analytics-pipeline
+go get github.com/segmentio/kafka-go
+go get github.com/colinmarc/hdfs/v2
+
+@aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ docker inspect spark-master --format '{{.Config.Image}}'
+bde2020/spark-master:3.3.0-hadoop3.3
+@aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ docker exec -it spark-master bash -lc 'find / -name spark-submit 2>/dev/null | head -20'
+/spark/bin/spark-submit
+
+docker exec -it spark-master bash -lc \
+  '/spark/bin/spark-submit --master spark://spark-master:7077 /opt/analytics/reco_job.py'
+
+
+ kafka-console-consumer \
+  --bootstrap-server kafka-destination:1096 \
+  --consumer.config /etc/kafka/secrets/admin.properties \
+  --topic recommendations-topic \
+  --from-beginning
+
+  docker exec -it namenode bash
+
+hdfs dfs -mkdir -p /data/cart
+hdfs dfs -mkdir -p /data/reco/dt=latest
+hdfs dfs -ls /data
+
+
+@aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ docker exec -it namenode bash
+root@db631664309a:/# hdfs dfs -mkdir -p /data/cart
+root@db631664309a:/# hdfs dfs -ls /data
+Found 2 items
+drwxr-xr-x   - root supergroup          0 2026-02-01 17:36 /data/cart
+drwxr-xr-x   - root supergroup          0 2026-02-01 17:28 /data/reco
+root@db631664309a:/# hdfs dfs -ls /data/cart
+
+Found 1 items
+drwxr-xr-x   - root supergroup          0 2026-02-01 17:36 /data/cart/dt=2026-02-01
+root@db631664309a:/# 
+
+
+Проверить, что в HDFS появились файлы и в них есть данные
+Внутри namenode:
+hdfs dfs -ls -h /data/cart/dt=2026-02-01
+Если там будут файлы (часто .json, .jsonl, .parquet, .csv или part-*) — супер.
+Посмотреть первые строки (выбери файл из списка):
+hdfs dfs -cat /data/cart/dt=2026-02-01/* | head -50
+
+root@db631664309a:/# hdfs dfs -cat /data/cart/dt=2026-02-01/* | head -50
+
+2026-02-01 17:44:38,857 INFO sasl.SaslDataTransferClient: SASL encryption trust check: localHostTrusted = false, remoteHostTrusted = false
+{"brand":"XYZ","category":"Электроника","created_at":"2023-10-01T12:00:00Z","description":"Умные часы с функцией мониторинга здоровья, GPS и уведомлениями.","images":[{"alt":"Умные часы XYZ - вид спереди","url":"https://example.com/images/product1.jpg"},{"alt":"Умные часы XYZ - вид сбоку","url":"https://example.com/images/product1_side.jpg"}],"index":"products","name":"Умные часы XYZ","price":{"amount":4999.99,"currency":"RUB"},"product_id":"12345","sku":"XYZ-12345","specifications":{"battery_life":"24 hours","dimensions":"42mm x 36mm x 10mm","water_resistance":"IP68","weight":"50g"},"stock":{"available":150,"reserved":20},"store_id":"store_001","tags":["умные часы","гаджеты","технологии"],"updated_at":"2023-10-10T15:30:00Z","user_id":"1"}
+
+
+
+Запуск reco_job.py
+docker exec -it spark-master bash -lc '
+/spark/bin/spark-submit \
+  --master spark://spark-master:7077 \
+  --name cart-analytics \
+  --deploy-mode client \
+  --executor-cores 1 \
+  --executor-memory 512m \
+  --driver-memory 512m \
+  /opt/analytics/reco_job.py
+'
+
+
+Проверить, что reco_job записал результат в HDFS
+
+@aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ docker exec -it namenode bash
+root@db631664309a:/# hdfs dfs -ls -R /data/reco
+eco/dt=latest || true
+hdfs dfs -cat /data/reco/dt=latest/part-* 2>/dev/null | head -50 || true
+drwxr-xr-x   - root supergroup          0 2026-02-01 18:17 /data/reco/dt=latest
+-rw-r--r--   3 root supergroup          0 2026-02-01 18:17 /data/reco/dt=latest/_SUCCESS
+-rw-r--r--   3 root supergroup         52 2026-02-01 18:17 /data/reco/dt=latest/part-00000-3c62105c-b6b8-46b7-9e31-cf339e1ef32c-c000.json
+root@db631664309a:/# hdfs dfs -ls -h /data/reco/dt=latest || true
+Found 2 items
+-rw-r--r--   3 root supergroup          0 2026-02-01 18:17 /data/reco/dt=latest/_SUCCESS
+-rw-r--r--   3 root supergroup         52 2026-02-01 18:17 /data/reco/dt=latest/part-00000-3c62105c-b6b8-46b7-9e31-cf339e1ef32c-c000.json
+root@db631664309a:/# hdfs dfs -cat /data/reco/dt=latest/part-* 2>/dev/null | head -50 || true
+{"user_id":"1","product_id":"12345","cnt":1,"rn":1}
+
+
+
+Проверить, что рекомендации улетели в Kafka (recommendations-topic)
+
+
+
+docker compose build
