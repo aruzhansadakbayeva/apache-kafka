@@ -118,8 +118,6 @@ services:
     volumes:
       - ./certs/kafka-1:/etc/kafka/secrets
       - kafka_source_data:/bitnami/kafka
-    networks:
-      - kraft-net
 
   kafka-2:
     image: confluentinc/cp-kafka:7.4.4
@@ -201,6 +199,7 @@ services:
     - "8083:8083"
     environment:
       CONNECT_BOOTSTRAP_SERVERS: kafka-1:1092
+      CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
 
       CONNECT_GROUP_ID: connect-cluster
       CONNECT_CONFIG_STORAGE_TOPIC: connect-configs
@@ -297,8 +296,7 @@ services:
     volumes:
       - ./certs/kafka-destination:/etc/kafka/secrets
       - kafka_dest_data:/var/lib/kafka/data
-    networks:
-      - kraft-net
+
 
 
 
@@ -306,23 +304,40 @@ services:
 
   mirror-maker:
     image: confluentinc/cp-kafka:7.4.4
+    container_name: mirror-maker
     depends_on:
-      - kafka-1
-      - kafka-destination
+    - kafka-1
+    - kafka-destination
     environment:
-     KAFKA_HEAP_OPTS: "-Xms512m -Xmx1024m"
+      KAFKA_HEAP_OPTS: "-Xms512m -Xmx1024m"
+    volumes:
+    - ./certs/kafka-1:/etc/kafka/source-secrets
+    - ./certs/kafka-destination:/etc/kafka/dest-secrets
     command: >
-      bash -c "echo 'bootstrap.servers=kafka-1:1092' > /tmp/consumer.properties && \
-           echo 'group.id=mirror-maker-group' >> /tmp/consumer.properties && \
-           echo 'security.protocol=SASL_SSL' >> /tmp/consumer.properties && \
-           echo 'sasl.mechanism=PLAIN' >> /tmp/consumer.properties && \
-           echo 'sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username=\"admin\" password=\"admin-secret\";' >> /tmp/consumer.properties && \
-           echo 'bootstrap.servers=kafka-destination:1096' > /tmp/producer.properties && \
-           echo 'security.protocol=PLAINTEXT' >> /tmp/producer.properties && \
-           kafka-mirror-maker --consumer.config /tmp/consumer.properties --producer.config /tmp/producer.properties --whitelist products-topic --num.streams 1"
+     bash -c "
+       echo 'bootstrap.servers=kafka-1:1092' > /tmp/consumer.properties &&
+       echo 'group.id=mirror-maker-group' >> /tmp/consumer.properties &&
+       echo 'auto.offset.reset=earliest' >> /tmp/consumer.properties &&
+       echo 'security.protocol=SASL_SSL' >> /tmp/consumer.properties &&
+       echo 'sasl.mechanism=PLAIN' >> /tmp/consumer.properties &&
+       echo 'sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username=\"consumer\" password=\"consumer-secret\";' >> /tmp/consumer.properties &&
+       echo 'ssl.truststore.location=/etc/kafka/source-secrets/kafka.truststore.jks' >> /tmp/consumer.properties &&
+       echo 'ssl.truststore.password=password' >> /tmp/consumer.properties &&
+       echo 'ssl.endpoint.identification.algorithm=' >> /tmp/consumer.properties &&
 
-    networks:
-      - kraft-net
+       echo 'bootstrap.servers=kafka-destination:1096' > /tmp/producer.properties &&
+       echo 'security.protocol=SASL_SSL' >> /tmp/producer.properties &&
+       echo 'sasl.mechanism=PLAIN' >> /tmp/producer.properties &&
+       echo 'sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username=\"mirrormaker\" password=\"mm-secret\";' >> /tmp/producer.properties &&
+       echo 'ssl.truststore.location=/etc/kafka/dest-secrets/kafka.truststore.jks' >> /tmp/producer.properties &&
+       echo 'ssl.truststore.password=password' >> /tmp/producer.properties &&
+       echo 'ssl.endpoint.identification.algorithm=' >> /tmp/producer.properties &&
+
+       kafka-mirror-maker --consumer.config /tmp/consumer.properties --producer.config /tmp/producer.properties --whitelist 'products-topic' --num.streams 1
+     "
+
+
+
 
 
 volumes:

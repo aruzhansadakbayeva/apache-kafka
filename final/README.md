@@ -59,7 +59,7 @@ kafka-acls \
   --group '*'
 
 
-docker exec -it final-kafka-1-1 kafka-acls \
+kafka-acls \
   --bootstrap-server kafka-1:1092 \
   --command-config /etc/kafka/secrets/admin.properties \
   --add --allow-principal User:admin --operation Read --topic products-topic
@@ -109,8 +109,31 @@ kafka-console-consumer \
 
 
 
+docker exec -it final-kafka-connect-1 bash
+confluent-hub install confluentinc/kafka-connect-elasticsearch:latest --no-prompt
+
+@aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ docker exec -it final-kafka-connect-1 bash
+[appuser@kafka-connect ~]$ confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:latest
+Running in a "--no-prompt" mode 
+
+Implicit acceptance of the license below:  
+Confluent Community License 
+http://www.confluent.io/confluent-community-license 
+Downloading component Kafka Connect Elasticsearch 15.1.1, provided by Confluent, Inc. from Confluent Hub and installing into /usr/share/confluent-hub-components 
+Adding installation directory to plugin path in the following files: 
+  /etc/kafka/connect-distributed.properties 
+  /etc/kafka/connect-standalone.properties 
+  /etc/schema-registry/connect-avro-distributed.properties 
+  /etc/schema-registry/connect-avro-standalone.properties 
+  /etc/kafka-connect/kafka-connect.properties 
+ 
+Completed 
+[appuser@kafka-connect ~]$ 
+[appuser@kafka-connect ~]$ curl http://localhost:8083/connector-plugins
+[{"class":"org.apache.kafka.connect.mirror.MirrorCheckpointConnector","type":"source","version":"7.4.4-ccs"},{"class":"org.apache.kafka.connect.mirror.MirrorHeartbeatConnector","type":"source","version":"7.4.4-ccs"},{"class":"org.apache.kafka.connect.mirror.MirrorSourceConnector","type":"source","version":"7.4.4-ccs"}][appuser@kafka-connect ~]$ 
 
 
+docker restart final-kafka-connect-1
 
 curl -X POST -H "Content-Type: application/json" \
   --data @connector.json \
@@ -305,6 +328,15 @@ kafka-console-consumer \
 
 
 
+docker exec -it final-kafka-1-1 bash
+kafka-acls \
+  --bootstrap-server kafka-1:1092 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --add \
+  --allow-principal User:consumer \
+  --operation Read \
+  --topic products-topic \
+  --group mirror-maker-group
 
 
 docker exec -it kafka-destination bash
@@ -315,6 +347,16 @@ kafka-topics \
   --command-config /etc/kafka/secrets/admin.properties \
   --list
 
+
+
+kafka-acls \
+  --bootstrap-server kafka-destination:1096 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --add \
+  --allow-principal User:mirrormaker \
+  --operation Write \
+  --operation Create \
+  --topic products-topic
 
 
 kafka-acls \
@@ -345,3 +387,23 @@ kafka-console-consumer \
   --consumer.config /etc/kafka/secrets/admin.properties \
   --topic products-topic \
   --from-beginning
+
+
+
+
+  в certs/kafka-destination добавила admin.properties:
+  security.protocol=SASL_SSL
+  sasl.mechanism=PLAIN
+  sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required \
+   username="admin" password="admin-secret";
+  ssl.truststore.location=/etc/kafka/secrets/kafka.truststore.jks
+  ssl.truststore.password=password
+
+и kafka_server_jaas.conf:
+KafkaServer {
+  org.apache.kafka.common.security.plain.PlainLoginModule required
+  username="admin"
+  password="admin-secret"
+  user_admin="admin-secret"
+  user_mirrormaker="mm-secret";
+};
