@@ -39,6 +39,8 @@ kafka-topics \
 
 
 
+
+
 kafka-acls \
   --bootstrap-server kafka-1:1092 \
   --command-config /etc/kafka/secrets/admin.properties \
@@ -61,7 +63,6 @@ docker exec -it final-kafka-1-1 kafka-acls \
   --bootstrap-server kafka-1:1092 \
   --command-config /etc/kafka/secrets/admin.properties \
   --add --allow-principal User:admin --operation Read --topic products-topic
-
 
 
 
@@ -221,7 +222,15 @@ curl -X GET "http://localhost:9200/products-topic/_search?pretty" -H 'Content-Ty
 На всякий случай:
 curl -X DELETE http://localhost:8083/connectors/products-elasticsearch-sink
 
+перезапуск коннектора чтобы он прочел топик заново:
+curl -X POST http://localhost:8083/connectors/products-elasticsearch-sink/restart
 
+если в контейнере нет плагина elasticsearch: 
+confluent-hub install confluentinc/kafka-connect-elasticsearch:latest --no-prompt
+(из контейнера)
+
+docker restart <container>
+docker logs <container>
 
 
 
@@ -268,4 +277,71 @@ kafka-console-consumer \
   --bootstrap-server kafka-1:1092 \
   --consumer.config /etc/kafka/secrets/admin.properties \
   --topic cart-topic \
+  --from-beginning
+
+
+
+
+
+
+ docker exec -it kafka-destination bash
+
+  kafka-acls \
+  --bootstrap-server kafka-destination:1096 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --add \
+  --allow-principal User:admin \
+  --operation Read \
+  --operation Write \
+  --topic products-topic
+
+
+  kafka-metadata-quorum \
+  --bootstrap-server kafka-destination:1096 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  describe --status
+
+
+
+
+
+
+
+docker exec -it kafka-destination bash
+
+
+kafka-topics \
+  --bootstrap-server kafka-destination:1096 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --list
+
+
+
+kafka-acls \
+  --bootstrap-server kafka-destination:1096 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --add --allow-principal User:admin --operation Read --topic products-topic
+
+
+
+kafka-acls \
+  --bootstrap-server kafka-destination:1096 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --add \
+  --allow-principal User:consumer \
+  --operation Read \
+  --group '*'
+
+
+
+kafka-acls \
+  --bootstrap-server kafka-destination:1096 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --list
+
+
+kafka-console-consumer \
+  --bootstrap-server kafka-destination:1096 \
+  --consumer.config /etc/kafka/secrets/admin.properties \
+  --topic products-topic \
   --from-beginning

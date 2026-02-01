@@ -117,6 +117,9 @@ services:
       KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/kafka.truststore.jks
     volumes:
       - ./certs/kafka-1:/etc/kafka/secrets
+      - kafka_source_data:/bitnami/kafka
+    networks:
+      - kraft-net
 
   kafka-2:
     image: confluentinc/cp-kafka:7.4.4
@@ -226,3 +229,107 @@ services:
 
     volumes:
     - ./certs/kafka-1:/etc/kafka/secrets
+
+
+
+  kafka-destination:
+    image: confluentinc/cp-kafka:7.4.4
+    hostname: kafka-destination
+    container_name: kafka-destination
+    ports:
+    - "1096:1096"   # broker
+    - "1095:1095"   # controller
+    environment:
+      KAFKA_HEAP_OPTS: "-Xms512M -Xmx1G"
+
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      CLUSTER_ID: "bgXnZO0OTwWECZ_qgc_PFA"
+
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-destination:1095
+
+      KAFKA_LISTENERS: BROKER://0.0.0.0:1096,CONTROLLER://0.0.0.0:1095
+      KAFKA_ADVERTISED_LISTENERS: BROKER://kafka-destination:1096
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: BROKER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: BROKER:SASL_SSL,CONTROLLER:SASL_SSL
+
+    # ===== SASL =====
+      KAFKA_OPTS: "-Djava.security.auth.login.config=/etc/kafka/secrets/kafka_server_jaas.conf"
+      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
+      KAFKA_SASL_MECHANISM_CONTROLLER_PROTOCOL: PLAIN
+      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+
+      KAFKA_LISTENER_NAME_BROKER_PLAIN_SASL_JAAS_CONFIG: >
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+        username="admin"
+        password="admin-secret"
+        user_admin="admin-secret"
+        user_mirrormaker="mm-secret";
+
+      KAFKA_LISTENER_NAME_CONTROLLER_PLAIN_SASL_JAAS_CONFIG: >
+        org.apache.kafka.common.security.plain.PlainLoginModule required
+        username="admin"
+        password="admin-secret"
+        user_admin="admin-secret"
+        user_mirrormaker="mm-secret";
+
+    # ===== ACL =====
+      KAFKA_AUTHORIZER_CLASS_NAME: org.apache.kafka.metadata.authorizer.StandardAuthorizer
+      KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: false
+      KAFKA_SUPER_USERS: User:admin
+
+    # ===== SSL =====
+      KAFKA_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/kafka.keystore.jks
+      KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/kafka.truststore.jks
+      KAFKA_SSL_KEYSTORE_PASSWORD: password
+      KAFKA_SSL_KEY_PASSWORD: password
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: password
+      KAFKA_SSL_CLIENT_AUTH: required
+
+    volumes:
+      - ./certs/kafka-destination:/etc/kafka/secrets
+      - kafka_dest_data:/var/lib/kafka/data
+    networks:
+      - kraft-net
+
+
+
+
+
+  mirror-maker:
+    image: confluentinc/cp-kafka:7.4.4
+    depends_on:
+      - kafka-1
+      - kafka-destination
+    environment:
+     KAFKA_HEAP_OPTS: "-Xms512m -Xmx1024m"
+    command: >
+      bash -c "echo 'bootstrap.servers=kafka-1:1092' > /tmp/consumer.properties && \
+           echo 'group.id=mirror-maker-group' >> /tmp/consumer.properties && \
+           echo 'security.protocol=SASL_SSL' >> /tmp/consumer.properties && \
+           echo 'sasl.mechanism=PLAIN' >> /tmp/consumer.properties && \
+           echo 'sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username=\"admin\" password=\"admin-secret\";' >> /tmp/consumer.properties && \
+           echo 'bootstrap.servers=kafka-destination:1096' > /tmp/producer.properties && \
+           echo 'security.protocol=PLAINTEXT' >> /tmp/producer.properties && \
+           kafka-mirror-maker --consumer.config /tmp/consumer.properties --producer.config /tmp/producer.properties --whitelist products-topic --num.streams 1"
+
+    networks:
+      - kraft-net
+
+
+volumes:
+  kafka_source_data:
+  kafka_dest_data:
+
+
+networks:
+  kraft-net:
+   driver: bridge

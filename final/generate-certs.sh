@@ -1,6 +1,6 @@
 
 set -e
-BROKERS=("kafka-controller-0" "kafka-controller-1" "kafka-1" "kafka-2" "kafka-3")
+BROKERS=("kafka-controller-0" "kafka-controller-1" "kafka-1" "kafka-2" "kafka-3" "kafka-destination")
 BASE_DIR="$(pwd)/certs"
 
 CA_DIR="$BASE_DIR/ca"
