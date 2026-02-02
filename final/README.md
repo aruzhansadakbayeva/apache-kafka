@@ -198,6 +198,8 @@ BLOCKED: product_id="999" name="Запрещённые часы" (banned by prod
 В consumer на products-filtered-topic появится ТОЛЬКО:
 {"product_id":"100","name":"Разрешённые часы","description":"good"}
 
+Фильтрация успешно обрабатывает сообщения из products-topic, которые в свою очередь читаются из products.json
+
 
 
 kafka-console-consumer \
