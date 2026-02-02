@@ -139,6 +139,67 @@ kafka-console-consumer \
   --topic products-topic \
   --from-beginning
 
+
+@aruzhansadakbayeva ➜ /workspaces/apache-kafka (final) $ docker inspect products-filter --format '{{json .Mounts}}' | jq
+[
+  {
+    "Type": "bind",
+    "Source": "/workspaces/apache-kafka/final/filter/data",
+    "Destination": "/app/data",
+    "Mode": "rw",
+    "RW": true,
+    "Propagation": "rprivate"
+  }
+]
+@aruzhansadakbayeva ➜ /workspaces/apache-kafka (final) $ docker exec -it products-filter sh
+/app # /app/filter add --id 12345 --reason "banned by policy"
+added banned item: id="12345" name=""
+/app # /app/filter add --id 12344 --reason "banned by policy"
+added banned item: id="12344" name=""
+/app # /app/filter list
+1) id="12345" name="" reason="banned by policy" added_at=2026-02-02T06:49:01Z
+2) id="12344" name="" reason="banned by policy" added_at=2026-02-02T06:49:29Z
+
+удалить из запрещенных: /app/filter remove --id 12345
+
+Шаг 1. Добавим запрещённый товар через CLI
+Например, запретим product_id=999
+docker exec -it products-filter /app/filter add --id 999 --reason "test ban"
+Проверим:
+docker exec -it products-filter /app/filter list
+Ты увидишь его в списке.
+Шаг 2. Открой consumer на выходной топик
+Это самое важное — тут будет видно итог фильтрации.
+docker exec -it final-kafka-1-1 bash -lc '
+kafka-console-consumer \
+  --bootstrap-server kafka-1:1092 \
+  --consumer.config /etc/kafka/secrets/admin.properties \
+  --topic products-filtered-topic \
+  --from-beginning
+'
+Оставь этот терминал открытым.
+Шаг 3. Отправим 2 товара во входной топик
+В другом терминале:
+docker exec -i final-kafka-1-1 bash -lc '
+kafka-console-producer \
+  --bootstrap-server kafka-1:1092 \
+  --producer.config /etc/kafka/secrets/admin.properties \
+  --topic products-topic
+'
+И вставь две строки:
+❌ Запрещённый (НЕ должен пройти)
+{"product_id":"999","name":"Запрещённые часы","description":"bad"}
+✅ Разрешённый (должен пройти)
+{"product_id":"100","name":"Разрешённые часы","description":"good"}
+Шаг 4. Что должно произойти
+В логах products-filter (docker logs -f products-filter) ты увидишь:
+BLOCKED: product_id="999" name="Запрещённые часы" (banned by product_id)
+и НЕ будет записи про отправку.
+В consumer на products-filtered-topic появится ТОЛЬКО:
+{"product_id":"100","name":"Разрешённые часы","description":"good"}
+
+
+
 kafka-console-consumer \
   --bootstrap-server kafka-1:1092 \
   --consumer.config /etc/kafka/secrets/admin.properties \
@@ -153,12 +214,7 @@ kafka-console-consumer \
   --from-beginning
 
 
-kafka-console-consumer \
-  --bootstrap-server kafka-1:1092 \
-  --consumer.config /etc/kafka/secrets/admin.properties \
-  --topic products-topic \
-  --from-beginning \
-  --timeout-ms 10000 | jq 'select(.name=="Умные часы XYZ")'
+
 
 
 
@@ -646,3 +702,5 @@ docker compose build
 
 
 docker compose build products-filter
+
+

@@ -189,6 +189,7 @@ services:
     - ./certs/kafka-1:/etc/kafka/secrets
     - ./customer/cart_products.json:/app/cart_products.json
 
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
     container_name: elasticsearch
@@ -445,6 +446,7 @@ services:
       KAFKA_IN_TOPIC: products-topic
       KAFKA_OUT_TOPIC: products-filtered-topic
       GOKA_GROUP: products-filter-v1
+      BANNED_FILE: /app/data/banned.json
 
       KAFKA_SECURITY_PROTOCOL: SASL_SSL
       KAFKA_SASL_USER: admin
@@ -452,6 +454,8 @@ services:
       KAFKA_SASL_MECHANISM: PLAIN
     depends_on:
       - kafka-1
+    volumes:
+      - ./filter/data:/app/data
 
 
 
