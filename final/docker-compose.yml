@@ -173,12 +173,21 @@ services:
       - ./certs/kafka-1:/etc/kafka/secrets
 
 
-  producer:
-    build: .
+  shop:
+    build: ./shop
     depends_on:
     - kafka-1
     volumes:
     - ./certs/kafka-1:/etc/kafka/secrets
+    - ./shop/products.json:/app/products.json
+
+  customer:
+    build: ./customer
+    depends_on:
+    - kafka-1
+    volumes:
+    - ./certs/kafka-1:/etc/kafka/secrets
+    - ./customer/cart_products.json:/app/cart_products.json
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
@@ -426,6 +435,24 @@ services:
     depends_on:
       - kafka-destination
       - namenode
+
+
+  products-filter:
+    build: ./filter
+    container_name: products-filter
+    environment:
+      KAFKA_BROKERS: kafka-1:1092
+      KAFKA_IN_TOPIC: products-topic
+      KAFKA_OUT_TOPIC: products-filtered-topic
+      GOKA_GROUP: products-filter-v1
+
+      KAFKA_SECURITY_PROTOCOL: SASL_SSL
+      KAFKA_SASL_USER: admin
+      KAFKA_SASL_PASS: admin-secret
+      KAFKA_SASL_MECHANISM: PLAIN
+    depends_on:
+      - kafka-1
+
 
 
 volumes:

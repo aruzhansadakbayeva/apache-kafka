@@ -36,6 +36,16 @@ kafka-topics \
   --replication-factor 3 \
   --config min.insync.replicas=2
 
+kafka-topics \
+  --bootstrap-server kafka-1:1092 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --create \
+  --if-not-exists \
+  --topic products-filtered-topic \
+  --partitions 3 \
+  --replication-factor 3 \
+  --config min.insync.replicas=2
+
 
 kafka-topics \
   --bootstrap-server kafka-1:1092 \
@@ -57,6 +67,15 @@ kafka-acls \
   --allow-principal User:producer \
   --operation Write \
   --topic products-topic
+
+
+kafka-acls \
+  --bootstrap-server kafka-1:1092 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --add \
+  --allow-principal User:producer \
+  --operation Write \
+  --topic products-filtered-topic
 
 
 kafka-acls \
@@ -88,6 +107,10 @@ kafka-acls \
   --add --allow-principal User:admin --operation Read --topic cart-topic
 
 
+kafka-acls \
+  --bootstrap-server kafka-1:1092 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --add --allow-principal User:admin --operation Read --topic products-filtered-topic
 
 
 kafka-acls \
@@ -106,15 +129,20 @@ Current ACLs for resource `ResourcePattern(resourceType=TOPIC, name=products-top
 
 
 # Запустила 
-docker compose up --build producer
+docker compose up --build 
 
 docker exec -it final-kafka-1-1 bash
-
 # Тест - получила сообщение из products.json
 kafka-console-consumer \
   --bootstrap-server kafka-1:1092 \
   --consumer.config /etc/kafka/secrets/admin.properties \
   --topic products-topic \
+  --from-beginning
+
+kafka-console-consumer \
+  --bootstrap-server kafka-1:1092 \
+  --consumer.config /etc/kafka/secrets/admin.properties \
+  --topic products-filtered-topic \
   --from-beginning
 
 
@@ -131,6 +159,8 @@ kafka-console-consumer \
   --topic products-topic \
   --from-beginning \
   --timeout-ms 10000 | jq 'select(.name=="Умные часы XYZ")'
+
+
 
 
 
@@ -387,6 +417,7 @@ kafka-topics \
 
 
 
+
 kafka-acls \
   --bootstrap-server kafka-destination:1096 \
   --command-config /etc/kafka/secrets/admin.properties \
@@ -611,3 +642,7 @@ kafka-console-consumer \
 
 
 docker compose build
+
+
+
+docker compose build products-filter
