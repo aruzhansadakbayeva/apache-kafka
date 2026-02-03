@@ -520,13 +520,11 @@ drwxr-xr-x   - root supergroup          0 2026-02-01 17:36 /data/cart/dt=2026-02
 root@db631664309a:/# 
 
 
-Проверить, что в HDFS появились файлы и в них есть данные
+Проверка, что в HDFS появились файлы и в них есть данные
 Внутри namenode:
 hdfs dfs -ls -h /data/cart/dt=2026-02-01
-Если там будут файлы (часто .json, .jsonl, .parquet, .csv или part-*) — супер.
-Посмотреть первые строки (выбери файл из списка):
-hdfs dfs -cat /data/cart/dt=2026-02-01/* | head -50
-
+Имеется файл .jsonl
+Посмотреть первые строки:
 root@db631664309a:/# hdfs dfs -cat /data/cart/dt=2026-02-01/* | head -50
 
 2026-02-01 17:44:38,857 INFO sasl.SaslDataTransferClient: SASL encryption trust check: localHostTrusted = false, remoteHostTrusted = false
@@ -546,7 +544,7 @@ docker exec -it spark-master bash -lc '
 '
 
 
-Проверить, что reco_job записал результат в HDFS
+Проверка, что reco_job записал результат в HDFS
 
 @aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ docker exec -it namenode bash
 root@db631664309a:/# hdfs dfs -ls -R /data/reco
@@ -564,7 +562,7 @@ root@db631664309a:/# hdfs dfs -cat /data/reco/dt=latest/part-* 2>/dev/null | hea
 
 
 
-Проверить, что рекомендации улетели в Kafka (recommendations-topic)
+Проверка, что рекомендации улетели в Kafka (recommendations-topic)
 
 @aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ docker exec -it kafka-tools bash -lc '
 kafka-topics \
@@ -643,3 +641,4 @@ alertmanager  | time=2026-02-03T08:38:15.935Z level=INFO source=tls_config.go:35
 Алерт ушел в resolved
 
 В телеграм-бот пришли соответствующие сообщения (скрины приложены).
+![Image (3)](https://github.com/user-attachments/assets/567a135f-46a1-42cc-a212-f08b896b055b)
