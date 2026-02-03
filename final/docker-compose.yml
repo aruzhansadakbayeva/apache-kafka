@@ -108,15 +108,23 @@ services:
     ports:
       - "1090:1090"
       - "1092:1092"
+      - "7071:7071"   # <-- JMX Exporter metrics (HTTP)
     environment:
       <<: *kafka_broker-env
       KAFKA_NODE_ID: 1000
       KAFKA_LISTENERS: BROKER://0.0.0.0:1090,INTERNAL://0.0.0.0:1092
       KAFKA_ADVERTISED_LISTENERS: BROKER://kafka-1:1090,INTERNAL://kafka-1:1092
+
+      # ВАЖНО: дописываем javaagent к уже существующему KAFKA_OPTS
+      KAFKA_OPTS: >-
+        -Djava.security.auth.login.config=/etc/kafka/secrets/kafka_server_jaas.conf
+        -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/kafka-jmx.yml
+
       KAFKA_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/kafka.keystore.jks
       KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/kafka.truststore.jks
     volumes:
       - ./certs/kafka-1:/etc/kafka/secrets
+      - ./monitoring:/opt/jmx:ro
       - kafka_source_data:/bitnami/kafka
 
   kafka-2:
@@ -125,15 +133,23 @@ services:
     ports:
       - "2090:2090"
       - "2092:2092"
+      - "7072:7071"   # <-- JMX Exporter metrics (HTTP)
     environment:
       <<: *kafka_broker-env
       KAFKA_NODE_ID: 2000
       KAFKA_LISTENERS: BROKER://0.0.0.0:2090,INTERNAL://0.0.0.0:2092
       KAFKA_ADVERTISED_LISTENERS: BROKER://kafka-2:2090,INTERNAL://kafka-2:2092
+
+      # ВАЖНО: дописываем javaagent к уже существующему KAFKA_OPTS
+      KAFKA_OPTS: >-
+        -Djava.security.auth.login.config=/etc/kafka/secrets/kafka_server_jaas.conf
+        -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/kafka-jmx.yml
+
       KAFKA_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/kafka.keystore.jks
       KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/kafka.truststore.jks
     volumes:
       - ./certs/kafka-2:/etc/kafka/secrets
+      - ./monitoring:/opt/jmx:ro
 
   kafka-3:
     image: confluentinc/cp-kafka:7.4.4
@@ -141,15 +157,23 @@ services:
     ports:
       - "3090:3090"
       - "3092:3092"
+      - "7073:7071"   # <-- JMX Exporter metrics (HTTP)
     environment:
       <<: *kafka_broker-env
       KAFKA_NODE_ID: 3000
       KAFKA_LISTENERS: BROKER://0.0.0.0:3090,INTERNAL://0.0.0.0:3092
       KAFKA_ADVERTISED_LISTENERS: BROKER://kafka-3:3090,INTERNAL://kafka-3:3092
+
+      # ВАЖНО: дописываем javaagent к уже существующему KAFKA_OPTS
+      KAFKA_OPTS: >-
+        -Djava.security.auth.login.config=/etc/kafka/secrets/kafka_server_jaas.conf
+        -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/kafka-jmx.yml
+
       KAFKA_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/kafka.keystore.jks
       KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/kafka.truststore.jks
     volumes:
       - ./certs/kafka-3:/etc/kafka/secrets
+      - ./monitoring:/opt/jmx:ro
 
 
   kafka-ui:
@@ -248,6 +272,7 @@ services:
     ports:
     - "1096:1096"   # broker
     - "1095:1095"   # controller
+    - "7076:7071"   # <-- JMX Exporter metrics (HTTP)
     environment:
       KAFKA_HEAP_OPTS: "-Xms512M -Xmx1G"
 
@@ -267,11 +292,16 @@ services:
       KAFKA_LISTENERS: BROKER://0.0.0.0:1096,CONTROLLER://0.0.0.0:1095
       KAFKA_ADVERTISED_LISTENERS: BROKER://kafka-destination:1096
 
+            # ВАЖНО: дописываем javaagent к уже существующему KAFKA_OPTS
+      KAFKA_OPTS: >-
+        -Djava.security.auth.login.config=/etc/kafka/secrets/kafka_server_jaas.conf
+        -javaagent:/opt/jmx/jmx_prometheus_javaagent.jar=7071:/opt/jmx/kafka-jmx.yml
+
       KAFKA_INTER_BROKER_LISTENER_NAME: BROKER
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: BROKER:SASL_SSL,CONTROLLER:SASL_SSL
 
     # ===== SASL =====
-      KAFKA_OPTS: "-Djava.security.auth.login.config=/etc/kafka/secrets/kafka_server_jaas.conf"
+      #KAFKA_OPTS: "-Djava.security.auth.login.config=/etc/kafka/secrets/kafka_server_jaas.conf"
       KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
       KAFKA_SASL_MECHANISM_CONTROLLER_PROTOCOL: PLAIN
       KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
@@ -306,6 +336,7 @@ services:
     volumes:
       - ./certs/kafka-destination:/etc/kafka/secrets
       - kafka_dest_data:/var/lib/kafka/data
+      - ./monitoring:/opt/jmx:ro
 
 
 
@@ -456,6 +487,41 @@ services:
       - kafka-1
     volumes:
       - ./filter/data:/app/data
+
+
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/rules.yml:/etc/prometheus/rules.yml:ro
+    depends_on:
+      - kafka-1
+      - kafka-2
+      - kafka-3
+      - kafka-destination
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
 
 
 

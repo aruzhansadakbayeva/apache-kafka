@@ -1,0 +1,33 @@
+startDelaySeconds: 5
+ssl: false
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+
+rules:
+  - pattern: "kafka.server<type=(.+), name=(.+)PerSec\\w*>(Count|OneMinuteRate)"
+    name: kafka_server_$1_$2_$3
+    type: GAUGE
+
+  - pattern: "kafka.server<type=(.+), name=(.+)><>Value"
+    name: kafka_server_$1_$2
+    type: GAUGE
+
+  - pattern: "kafka.network<type=(.+), name=(.+)><>Value"
+    name: kafka_network_$1_$2
+    type: GAUGE
+
+  - pattern: "java.lang<type=Memory><HeapMemoryUsage>(used|committed|max)"
+    name: jvm_memory_heap_$1
+    type: GAUGE
+
+  - pattern: "java.lang<type=GarbageCollector, name=(.+)><>CollectionCount"
+    name: jvm_gc_collection_count
+    labels:
+      gc: "$1"
+    type: COUNTER
+
+  - pattern: "java.lang<type=GarbageCollector, name=(.+)><>CollectionTime"
+    name: jvm_gc_collection_time_ms
+    labels:
+      gc: "$1"
+    type: COUNTER

@@ -1,0 +1,11 @@
+groups:
+  - name: kafka_alerts
+    rules:
+      - alert: KafkaBrokerDown
+        expr: up{job="kafka-jmx"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kafka broker is down (no metrics)"
+          description: "Prometheus can't scrape JMX metrics from {{ $labels.instance }} for >2m."

@@ -706,3 +706,36 @@ docker compose build
 docker compose build products-filter
 
 
+Запуск и проверка мониторинга:
+docker compose up -d --build
+Проверка, что метрики отдаются:
+http://localhost:9090 — Prometheus
+http://localhost:3000 — Grafana (admin/admin)
+http://localhost:7071/metrics — kafka-1 метрики
+В Prometheus → Status → Targets - UP для всех брокеров.
+
+В Grafana:
+Add data source → Prometheus → URL: http://prometheus:9090
+Создала дашборд и добавила панели на метрики типа:
+jvm_memory_heap_used
+
+
+@aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ docker compose ps alertmanager
+docker compose logs -f alertmanager
+NAME           IMAGE                      COMMAND                  SERVICE        CREATED          STATUS          PORTS
+alertmanager   prom/alertmanager:latest   "/bin/alertmanager -…"   alertmanager   26 minutes ago   Up 26 minutes   0.0.0.0:9093->9093/tcp, [::]:9093->9093/tcp
+alertmanager  | time=2026-02-03T08:38:15.888Z level=INFO source=main.go:191 msg="Starting Alertmanager" version="(version=0.31.0, branch=HEAD, revision=0ae07a09fbb26a7738c867306f32b5f42583a7d2)"
+alertmanager  | time=2026-02-03T08:38:15.889Z level=INFO source=main.go:194 msg="Build context" build_context="(go=go1.25.6, platform=linux/amd64, user=root@47d5a7c91e78, date=20260202-13:00:37, tags=netgo)"
+alertmanager  | time=2026-02-03T08:38:15.890Z level=INFO source=cluster.go:192 msg="setting advertise address explicitly" component=cluster addr=172.18.0.8 port=9094
+alertmanager  | time=2026-02-03T08:38:15.892Z level=INFO source=cluster.go:682 msg="Waiting for gossip to settle..." component=cluster interval=2s
+alertmanager  | time=2026-02-03T08:38:15.923Z level=INFO source=coordinator.go:111 msg="Loading configuration file" component=configuration file=/etc/alertmanager/alertmanager.yml
+alertmanager  | time=2026-02-03T08:38:15.929Z level=INFO source=coordinator.go:124 msg="Completed loading of configuration file" component=configuration file=/etc/alertmanager/alertmanager.yml
+alertmanager  | time=2026-02-03T08:38:15.935Z level=INFO source=tls_config.go:354 msg="Listening on" address=[::]:9093
+
+Для теста остановила один брокер: docker compose stop kafka-2
+Через ~2 минуты (как в rules.yml for: 2m):
+В Prometheus алерт стал FIRING
+В Alertmanager он появится
+
+Вернула брокер: docker compose start kafka-2
+Алерт ушел в resolved
