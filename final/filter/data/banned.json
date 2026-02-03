@@ -1,0 +1,17 @@
+[
+  {
+    "product_id": "12345",
+    "reason": "banned by policy",
+    "added_at": "2026-02-02T06:49:01Z"
+  },
+  {
+    "product_id": "12344",
+    "reason": "banned by policy",
+    "added_at": "2026-02-02T06:49:29Z"
+  },
+  {
+    "product_id": "999",
+    "reason": "test ban",
+    "added_at": "2026-02-02T07:08:01Z"
+  }
+]

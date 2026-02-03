@@ -1,0 +1,31 @@
+{
+  "name": "products-elasticsearch-sink",
+  "config": {
+    "connector.class": "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
+    "tasks.max": "1",
+    "topics": "products-filtered-topic",
+    "key.ignore": "true",
+    "connection.url": "http://elasticsearch:9200",
+    "type.name": "_doc",
+    "schema.ignore": "true",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "behavior.on.null.values": "ignore",
+
+    "producer.override.security.protocol": "SASL_SSL",
+    "producer.override.sasl.mechanism": "PLAIN",
+    "producer.override.sasl.jaas.config": "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"admin\" password=\"admin-secret\";",
+    "producer.override.ssl.truststore.location": "/etc/kafka/secrets/kafka.truststore.jks",
+    "producer.override.ssl.truststore.password": "password",
+    "producer.override.ssl.endpoint.identification.algorithm": "",
+
+    "consumer.override.security.protocol": "SASL_SSL",
+    "consumer.override.sasl.mechanism": "PLAIN",
+    "consumer.override.sasl.jaas.config": "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"admin\" password=\"admin-secret\";",
+    "consumer.override.ssl.truststore.location": "/etc/kafka/secrets/kafka.truststore.jks",
+    "consumer.override.ssl.truststore.password": "password",
+    "consumer.override.ssl.endpoint.identification.algorithm": ""
+  }
+}
