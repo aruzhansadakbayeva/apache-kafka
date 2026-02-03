@@ -1,7 +1,25 @@
+global:
+  resolve_timeout: 5m
+
 route:
-  receiver: "log"
+  group_by: ['alertname', 'instance']
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 30m
+  receiver: "telegram"
 
 receivers:
-  - name: "log"
-    webhook_configs:
-      - url: "http://localhost:1"  # заглушка, чтобы валидно парсилось
+  - name: "telegram"
+    telegram_configs:
+      - bot_token: "7628786919:AAFykw8vhyc6DFkT9mYjgEQZHAR7pmaDC_4"
+        chat_id: 296866646
+        parse_mode: "HTML"
+        send_resolved: true
+        message: |
+          <b>{{ .Status | toUpper }}</b> — <b>{{ .CommonLabels.alertname }}</b>
+          <b>Instance:</b> {{ .CommonLabels.instance }}
+          <b>Severity:</b> {{ .CommonLabels.severity }}
+          {{ range .Alerts }}
+          <b>Summary:</b> {{ .Annotations.summary }}
+          <b>Description:</b> {{ .Annotations.description }}
+          {{ end }}

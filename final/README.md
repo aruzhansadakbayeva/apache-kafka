@@ -739,3 +739,5 @@ alertmanager  | time=2026-02-03T08:38:15.935Z level=INFO source=tls_config.go:35
 
 Вернула брокер: docker compose start kafka-2
 Алерт ушел в resolved
+
+В телеграм-бот пришли соответствующие сообщения
