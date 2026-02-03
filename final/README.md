@@ -641,4 +641,13 @@ alertmanager  | time=2026-02-03T08:38:15.935Z level=INFO source=tls_config.go:35
 Алерт ушел в resolved
 
 В телеграм-бот пришли соответствующие сообщения (скрины приложены).
-![Image (3)](https://github.com/user-attachments/assets/567a135f-46a1-42cc-a212-f08b896b055b)
+
+
+<img width="1440" height="701" alt="Снимок экрана 2026-02-03 в 14 52 42" src="https://github.com/user-attachments/assets/d16133ee-fc06-4568-8fda-801b0fd3a7e1" />
+<img width="1440" height="701" alt="Снимок экрана 2026-02-03 в 14 46 40" src="https://github.com/user-attachments/assets/b0ffdcc8-f6de-4085-ace1-db5963964706" />
+<img width="1440" height="701" alt="Снимок экрана 2026-02-03 в 14 21 42" src="https://github.com/user-attachments/assets/94dadbd9-8572-4d92-8e29-876b40d45605" />
+<img width="1440" height="701" alt="Снимок экрана 2026-02-03 в 14 14 20" src="https://github.com/user-attachments/assets/19f536fe-08e7-4c9b-91f1-41de6158db95" />
+<img width="1440" height="530" alt="Снимок экрана 2026-02-03 в 13 40 58" src="https://github.com/user-attachments/assets/0d3155ff-146e-40ff-b5ef-29f9873c3067" />
+
+![Image (3)](https://github.com/user-attachments/assets/1c217af6-3e70-4485-9bec-75d47bacb048)
+
