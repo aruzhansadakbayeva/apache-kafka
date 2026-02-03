@@ -83,10 +83,10 @@ func main() {
 			continue
 		}
 
-		fmt.Printf("✅ Sent to partition %d offset %d\n", partition, offset)
+		fmt.Printf("Sent to partition %d offset %d\n", partition, offset)
 	}
 
-	fmt.Println("🎉 All products sent to Kafka")
+	fmt.Println("All products sent to Kafka")
 }
 
 func createTLSConfig(truststorePath string) (*tls.Config, error) {

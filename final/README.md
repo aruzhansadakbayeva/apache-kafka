@@ -3,7 +3,7 @@ chmod +x generate-certs.sh
 ./generate-certs.sh
 
 # Запуск:
-docker compose up --build
+docker compose up build
 
 В certs/kafka-1 добавила admin.properties:
 Протокол безопасности
