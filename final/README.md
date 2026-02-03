@@ -1,28 +1,37 @@
+# Генерация сертификатов:
 chmod +x generate-certs.sh
 ./generate-certs.sh
 
-docker compose up -d
+# Запуск:
+docker compose up --build
 
 В certs/kafka-1 добавила admin.properties:
-# Протокол безопасности
+Протокол безопасности
 security.protocol=SASL_SSL
 
-# Механизм аутентификации
+Механизм аутентификации
 sasl.mechanism=PLAIN
 
-# Данные для входа admin
+Данные для входа admin
 sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required \
   username="admin" \
   password="admin-secret";
 
-# SSL настройки
+SSL настройки
 ssl.truststore.location=/etc/kafka/secrets/kafka.truststore.jks
 ssl.truststore.password=password
 
+В certs/kafka-destination добавила аналогичный (выше) admin.properties и kafka_server_jaas.conf:
+KafkaServer {
+  org.apache.kafka.common.security.plain.PlainLoginModule required
+  username="admin"
+  password="admin-secret"
+  user_admin="admin-secret"
+  user_mirrormaker="mm-secret";
+};
 
 
-
-
+# Создание топиков и настройка ACL для защиты топиков; Настройка репликации данных и минимального кол-ва синхронных реплик:
 
 docker exec -it kafka-tools bash
 
@@ -35,6 +44,7 @@ kafka-topics \
   --partitions 3 \
   --replication-factor 3 \
   --config min.insync.replicas=2
+
 
 kafka-topics \
   --bootstrap-server kafka-1:1092 \
@@ -56,11 +66,8 @@ kafka-topics \
   --partitions 3 \
   --replication-factor 3 \
   --config min.insync.replicas=2
-
-
-
-
-kafka-acls \
+  
+  kafka-acls \
   --bootstrap-server kafka-1:1092 \
   --command-config /etc/kafka/secrets/admin.properties \
   --add \
@@ -101,6 +108,15 @@ kafka-acls \
   --command-config /etc/kafka/secrets/admin.properties \
   --add --allow-principal User:admin --operation Read --topic products-topic
 
+
+
+kafka-console-producer \
+  --bootstrap-server kafka-1:1092 \
+  --producer.config /etc/kafka/secrets/admin.properties \
+  --producer-property acks=all \
+  --topic products-topic
+
+
 kafka-acls \
   --bootstrap-server kafka-1:1092 \
   --command-config /etc/kafka/secrets/admin.properties \
@@ -118,21 +134,9 @@ kafka-acls \
   --command-config /etc/kafka/secrets/admin.properties \
   --list
 
-Вывод:
-
-Current ACLs for resource `ResourcePattern(resourceType=TOPIC, name=cart-topic, patternType=LITERAL)`: 
-        (principal=User:producer, host=*, operation=WRITE, permissionType=ALLOW) 
-
-Current ACLs for resource `ResourcePattern(resourceType=TOPIC, name=products-topic, patternType=LITERAL)`: 
-        (principal=User:consumer, host=*, operation=READ, permissionType=ALLOW)
-        (principal=User:producer, host=*, operation=WRITE, permissionType=ALLOW) 
-
-
-# Запустила 
-docker compose up --build 
 
 docker exec -it kafka-tools bash
-# Тест - получила сообщение из products.json
+# Тест - получила сообщения с товарами из products.json
 kafka-console-consumer \
   --bootstrap-server kafka-1:1092 \
   --consumer.config /etc/kafka/secrets/admin.properties \
@@ -140,6 +144,9 @@ kafka-console-consumer \
   --from-beginning
 
 
+
+# Настройка потоковой обработки для фильтрации товаров
+# Проверка контейнера:
 @aruzhansadakbayeva ➜ /workspaces/apache-kafka (final) $ docker inspect products-filter --format '{{json .Mounts}}' | jq
 [
   {
@@ -151,6 +158,7 @@ kafka-console-consumer \
     "Propagation": "rprivate"
   }
 ]
+# cоздание списка товаров, запрещённых к продаже; Управление списком через интерфейс командной строки:
 @aruzhansadakbayeva ➜ /workspaces/apache-kafka (final) $ docker exec -it products-filter sh
 /app # /app/filter add --id 12345 --reason "banned by policy"
 added banned item: id="12345" name=""
@@ -162,14 +170,16 @@ added banned item: id="12344" name=""
 
 удалить из запрещенных: /app/filter remove --id 12345
 
-Шаг 1. Добавим запрещённый товар через CLI
+Добавим запрещённый товар через CLI
 Например, запретим product_id=999
 docker exec -it products-filter /app/filter add --id 999 --reason "test ban"
-Проверим:
+
+Проверка:
 docker exec -it products-filter /app/filter list
+
 Ты увидишь его в списке.
-Шаг 2. Открой consumer на выходной топик
-Это самое важное — тут будет видно итог фильтрации.
+Открой consumer на выходной топик
+Тут будет видно итог фильтрации.
 docker exec -it kafka-tools bash -lc '
 kafka-console-consumer \
   --bootstrap-server kafka-1:1092 \
@@ -178,7 +188,7 @@ kafka-console-consumer \
   --from-beginning
 '
 Оставь этот терминал открытым.
-Шаг 3. Отправим 2 товара во входной топик
+Отправим 2 товара во входной топик
 В другом терминале:
 docker exec -it kafka-tools bash -lc '
 kafka-console-producer \
@@ -187,45 +197,24 @@ kafka-console-producer \
   --topic products-topic
 '
 И вставь две строки:
-❌ Запрещённый (НЕ должен пройти)
+Запрещённый (НЕ должен пройти)
 {"product_id":"999","name":"Запрещённые часы","description":"bad"}
-✅ Разрешённый (должен пройти)
+Разрешённый (должен пройти)
 {"product_id":"100","name":"Разрешённые часы","description":"good"}
-Шаг 4. Что должно произойти
-В логах products-filter (docker logs -f products-filter) ты увидишь:
+
+В логах products-filter (docker logs -f products-filter):
 BLOCKED: product_id="999" name="Запрещённые часы" (banned by product_id)
-и НЕ будет записи про отправку.
-В consumer на products-filtered-topic появится ТОЛЬКО:
+и не будет записи про отправку.
+В consumer на products-filtered-topic появится только:
 {"product_id":"100","name":"Разрешённые часы","description":"good"}
 
 Фильтрация успешно обрабатывает сообщения из products-topic, которые в свою очередь читаются из products.json
 
 
 
-docker exec -it kafka-tools bash
-kafka-console-consumer \
-  --bootstrap-server kafka-1:1092 \
-  --consumer.config /etc/kafka/secrets/admin.properties \
-  --topic products-filtered-topic \
-  --from-beginning
 
 
-kafka-console-consumer \
-  --bootstrap-server kafka-1:1092 \
-  --consumer.config /etc/kafka/secrets/admin.properties \
-  --topic cart-topic \
-  --from-beginning
-
-
-
-
-
-
-
-
-
-
-
+# установка elasticsearch; настройка и проверка kafka-connect:
 docker exec -it final-kafka-connect-1 bash
 confluent-hub install confluentinc/kafka-connect-elasticsearch:latest --no-prompt
 
@@ -252,27 +241,24 @@ Completed
 
 docker restart final-kafka-connect-1
 
+# Создание коннектора
 curl -X POST -H "Content-Type: application/json" \
   --data @connector.json \
   http://localhost:8083/connectors
 
 
-Ответ должен вернуть JSON с "state":"RUNNING" для коннектора и задач (tasks).
-4️⃣ Проверка
+Ответ вернул JSON с "state":"RUNNING" для коннектора и задач (tasks).
+
 Статус коннектора:
 curl -X GET http://localhost:8083/connectors/products-elasticsearch-sink/status
 Список индексов в Elasticsearch:
 curl -X GET "http://localhost:9200/_cat/indices?v"
-Если все OK, должен появиться индекс products и документы из Kafka должны попадать в него.
+Появился индекс products-filtered-topic и документы из Kafka попали в него.
 
 
- Вывод:
- @aruzhansadakbayeva ➜ curl -X GET http://localhost:8083/connectors/products-elasticsearch-sink/statusectors/products-elasticsearch-sink/status
-{"name":"products-elasticsearch-sink","connector":{"state":"RUNNING","worker_id":"kafka-connect:8083"},"tasks":[{"id":0,"state":"RUNNING","worker_id":"kafka-connect:8083"}],curl -X GET "http://localhost:9200/_cat/indices?v"ache-kafka/final (final) $ curl -X GET "http://localhost:9200/_cat/indices?v"
-health status index          uuid                   pri rep docs.count docs.deleted store.size pri.store.size dataset.size
 
 Команда для поиска товара по имени:
-curl -X GET "http://localhost:9200/products-topic/_search?pretty" -H 'Content-Type: application/json' -d'
+curl -X GET "http://localhost:9200/products-filtered-topic/_search?pretty" -H 'Content-Type: application/json' -d'
 {
   "query": {
     "match": {
@@ -282,7 +268,7 @@ curl -X GET "http://localhost:9200/products-topic/_search?pretty" -H 'Content-Ty
 }
 '
  еще:
-@aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ curl -X GET "http://localhost:9200/products-topic/_search?pretty" -H 'Content-Type: application/json' -d'
+@aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ curl -X GET "http://localhost:9200/products-filtered-topic/_search?pretty" -H 'Content-Type: application/json' -d'
 {
   "query": {
     "match": {
@@ -309,8 +295,8 @@ curl -X GET "http://localhost:9200/products-topic/_search?pretty" -H 'Content-Ty
     "max_score" : 0.5753642,
     "hits" : [
       {
-        "_index" : "products-topic",
-        "_id" : "products-topic+0+0",
+        "_index" : "products-filtered-topic",
+        "_id" : "products-filtered-topic+0+0",
         "_score" : 0.5753642,
         "_source" : {
           "store_id" : "store_001",
@@ -357,7 +343,6 @@ curl -X GET "http://localhost:9200/products-topic/_search?pretty" -H 'Content-Ty
     ]
   }
 }
-@aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ 
 
 На всякий случай:
 curl -X DELETE http://localhost:8083/connectors/products-elasticsearch-sink
@@ -365,86 +350,11 @@ curl -X DELETE http://localhost:8083/connectors/products-elasticsearch-sink
 перезапуск коннектора чтобы он прочел топик заново:
 curl -X POST http://localhost:8083/connectors/products-elasticsearch-sink/restart
 
-если в контейнере нет плагина elasticsearch: 
-confluent-hub install confluentinc/kafka-connect-elasticsearch:latest --no-prompt
-(из контейнера)
-
-docker restart <container>
-docker logs <container>
-
-
-
-docker exec -it kafka-tools bash
-kafka-topics \
-  --bootstrap-server kafka-1:1092 \
-  --command-config /etc/kafka/secrets/admin.properties \
-  --create \
-  --if-not-exists \
-  --topic cart-topic \
-  --partitions 3 \
-  --replication-factor 3 \
-  --config min.insync.replicas=2
-
-kafka-console-producer \
-  --bootstrap-server kafka-1:1092 \
-  --producer.config /etc/kafka/secrets/admin.properties \
-  --producer-property acks=all \
-  --topic products-topic
-
-  kafka-acls \
-  --bootstrap-server kafka-1:1092 \
-  --command-config /etc/kafka/secrets/admin.properties \
-  --add \
-  --allow-principal User:customer-producer \
-  --operation Write \
-  --topic cart-topic
-
-
-  # Тест 1 - записала сообщение hello в topic-1
-kafka-console-producer \
-  --bootstrap-server kafka-1:1092 \
-  --producer.config /etc/kafka/secrets/admin.properties \
-  --topic products-topic
-
-  # Тест 2 - записала сообщение hello в topic-2
-kafka-console-producer \
-  --bootstrap-server kafka-1:1092 \
-  --producer.config /etc/kafka/secrets/admin.properties \
-  --topic cart-topic
-
-
-kafka-console-consumer \
-  --bootstrap-server kafka-1:1092 \
-  --consumer.config /etc/kafka/secrets/admin.properties \
-  --topic cart-topic \
-  --from-beginning
 
 
 
 
-
-
- docker exec -it kafka-tools bash
-
-  kafka-acls \
-  --bootstrap-server kafka-destination:1096 \
-  --command-config /etc/kafka/secrets/admin.properties \
-  --add \
-  --allow-principal User:admin \
-  --operation Read \
-  --operation Write \
-  --topic products-topic
-
-
-  kafka-metadata-quorum \
-  --bootstrap-server kafka-destination:1096 \
-  --command-config /etc/kafka/secrets/admin.properties \
-  describe --status
-
-
-
-
-
+# Настройка consumer (mirror-maker-group) в исходном кластере + producer (mirrormaker) для записи в целевой кластер kafka-destination
 docker exec -it kafka-tools bash
 
 kafka-acls \
@@ -456,6 +366,7 @@ kafka-acls \
   --topic products-topic \
   --group mirror-maker-group
 
+
 kafka-acls \
   --bootstrap-server kafka-1:1092 \
   --command-config /etc/kafka/secrets/admin.properties \
@@ -466,15 +377,36 @@ kafka-acls \
   --group mirror-maker-group
 
 
-docker exec -it kafka-tools bash
+kafka-acls \
+  --bootstrap-server kafka-destination:1096 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --add \
+  --allow-principal User:admin \
+  --operation Read \
+  --operation Write \
+  --topic cart-topic
+
+
+kafka-acls \
+  --bootstrap-server kafka-destination:1096 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  --add \
+  --allow-principal User:admin \
+  --operation Read \
+  --operation Write \
+  --topic products-topic
+
+
+kafka-metadata-quorum \
+  --bootstrap-server kafka-destination:1096 \
+  --command-config /etc/kafka/secrets/admin.properties \
+  describe --status
 
 
 kafka-topics \
   --bootstrap-server kafka-destination:1096 \
   --command-config /etc/kafka/secrets/admin.properties \
   --list
-
-
 
 
 kafka-acls \
@@ -494,19 +426,6 @@ kafka-acls \
   --operation Write \
   --operation Create \
   --topic cart-topic
-
-
-kafka-acls \
-  --bootstrap-server kafka-destination:1096 \
-  --command-config /etc/kafka/secrets/admin.properties \
-  --add --allow-principal User:admin --operation Read --topic products-topic
-
-
-kafka-acls \
-  --bootstrap-server kafka-destination:1096 \
-  --command-config /etc/kafka/secrets/admin.properties \
-  --add --allow-principal User:admin --operation Read --topic cart-topic
-
 
 
 kafka-acls \
@@ -525,7 +444,7 @@ kafka-acls \
   --list
 
 
-
+# Проверка работы mirrormaker:
 docker restart mirror-maker
 
 docker exec -it kafka-tools bash
@@ -543,7 +462,10 @@ kafka-console-consumer \
   --topic cart-topic \
   --from-beginning
 
+Сообщения получены
 
+
+Создание топика для рекомендаций:
 kafka-topics \
   --bootstrap-server kafka-destination:1096 \
   --command-config /etc/kafka/secrets/admin.properties \
@@ -561,23 +483,9 @@ kafka-topics \
 
  
 
-
-
-
-
-  в certs/kafka-destination добавила admin.properties
-
-и kafka_server_jaas.conf:
-KafkaServer {
-  org.apache.kafka.common.security.plain.PlainLoginModule required
-  username="admin"
-  password="admin-secret"
-  user_admin="admin-secret"
-  user_mirrormaker="mm-secret";
-};
-
-
-
+# Аналитика: извлечение данных из kafka-destination (cart-topic) с переносом данных в HDFS -> обработка с исп. Spark (./analytics/reco_job.py) -> запись рекомендаций в отдельный топик Kafka
+Этот Spark-джоб строит топ-3 товаров для каждого пользователя на основе его истории корзины и сохраняет это как данные для рекомендаций.
+Читает из HDFS логи корзины (user_id, product_id) (посредством ingestor, который извлекает сообщения из cart-topic) - Считает, сколько раз каждый пользователь добавлял каждый товар - Для каждого пользователя выбирает 3 самых частых товара - Записывает результат обратно в HDFS в JSON (publisher далее публикует сообщение в recommendations-topic)
 
 
 go mod init analytics-pipeline
@@ -592,14 +500,7 @@ bde2020/spark-master:3.3.0-hadoop3.3
 docker exec -it spark-master bash -lc \
   '/spark/bin/spark-submit --master spark://spark-master:7077 /opt/analytics/reco_job.py'
 
-
- kafka-console-consumer \
-  --bootstrap-server kafka-destination:1096 \
-  --consumer.config /etc/kafka/secrets/admin.properties \
-  --topic recommendations-topic \
-  --from-beginning
-
-  docker exec -it namenode bash
+docker exec -it namenode bash
 
 hdfs dfs -mkdir -p /data/cart
 hdfs dfs -mkdir -p /data/reco/dt=latest
@@ -630,7 +531,6 @@ root@db631664309a:/# hdfs dfs -cat /data/cart/dt=2026-02-01/* | head -50
 
 2026-02-01 17:44:38,857 INFO sasl.SaslDataTransferClient: SASL encryption trust check: localHostTrusted = false, remoteHostTrusted = false
 {"brand":"XYZ","category":"Электроника","created_at":"2023-10-01T12:00:00Z","description":"Умные часы с функцией мониторинга здоровья, GPS и уведомлениями.","images":[{"alt":"Умные часы XYZ - вид спереди","url":"https://example.com/images/product1.jpg"},{"alt":"Умные часы XYZ - вид сбоку","url":"https://example.com/images/product1_side.jpg"}],"index":"products","name":"Умные часы XYZ","price":{"amount":4999.99,"currency":"RUB"},"product_id":"12345","sku":"XYZ-12345","specifications":{"battery_life":"24 hours","dimensions":"42mm x 36mm x 10mm","water_resistance":"IP68","weight":"50g"},"stock":{"available":150,"reserved":20},"store_id":"store_001","tags":["умные часы","гаджеты","технологии"],"updated_at":"2023-10-10T15:30:00Z","user_id":"1"}
-
 
 
 Запуск reco_job.py
@@ -688,6 +588,17 @@ recommendations-topic:1:0
 recommendations-topic:2:0
 
 
+cart-topic содержит сообщения с добавленными клиентом товарами в корзину 
+
+docker exec -it kafka-tools bash
+kafka-console-consumer \
+  --bootstrap-server kafka-1:1092 \
+  --consumer.config /etc/kafka/secrets/admin.properties \
+  --topic cart-topic \
+  --from-beginning
+
+Получение рекомендаций (рез-т):
+
 docker exec -it kafka-tools bash -lc '
 kafka-console-consumer \
   --bootstrap-server kafka-destination:1096 \
@@ -698,16 +609,7 @@ kafka-console-consumer \
 '
 
 
-
-
-docker compose build
-
-
-
-docker compose build products-filter
-
-
-Запуск и проверка мониторинга:
+# Запуск и проверка мониторинга:
 docker compose up -d --build
 Проверка, что метрики отдаются:
 http://localhost:9090 — Prometheus
@@ -717,8 +619,7 @@ http://localhost:7071/metrics — kafka-1 метрики
 
 В Grafana:
 Add data source → Prometheus → URL: http://prometheus:9090
-Создала дашборд и добавила панели на метрики типа:
-jvm_memory_heap_used
+Создала дашборд и добавила панели на метрики
 
 
 @aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ docker compose ps alertmanager
@@ -741,4 +642,4 @@ alertmanager  | time=2026-02-03T08:38:15.935Z level=INFO source=tls_config.go:35
 Вернула брокер: docker compose start kafka-2
 Алерт ушел в resolved
 
-В телеграм-бот пришли соответствующие сообщения
+В телеграм-бот пришли соответствующие сообщения (скрины приложены).
