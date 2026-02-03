@@ -525,6 +525,17 @@ services:
 
 
 
+  kafka-tools:
+    image: confluentinc/cp-kafka:7.4.4
+    container_name: kafka-tools
+    depends_on:
+      - kafka-1
+    entrypoint: ["/bin/bash", "-lc", "sleep infinity"]
+    volumes:
+      - ./certs/kafka-1:/etc/kafka/secrets
+
+
+
 volumes:
   kafka_source_data:
   kafka_dest_data:

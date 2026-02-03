@@ -24,7 +24,7 @@ ssl.truststore.password=password
 
 
 
-docker exec -it final-kafka-1-1 bash
+docker exec -it kafka-tools bash
 
 kafka-topics \
   --bootstrap-server kafka-1:1092 \
@@ -131,7 +131,7 @@ Current ACLs for resource `ResourcePattern(resourceType=TOPIC, name=products-top
 # Запустила 
 docker compose up --build 
 
-docker exec -it final-kafka-1-1 bash
+docker exec -it kafka-tools bash
 # Тест - получила сообщение из products.json
 kafka-console-consumer \
   --bootstrap-server kafka-1:1092 \
@@ -170,7 +170,7 @@ docker exec -it products-filter /app/filter list
 Ты увидишь его в списке.
 Шаг 2. Открой consumer на выходной топик
 Это самое важное — тут будет видно итог фильтрации.
-docker exec -it final-kafka-1-1 bash -lc '
+docker exec -it kafka-tools bash -lc '
 kafka-console-consumer \
   --bootstrap-server kafka-1:1092 \
   --consumer.config /etc/kafka/secrets/admin.properties \
@@ -180,7 +180,7 @@ kafka-console-consumer \
 Оставь этот терминал открытым.
 Шаг 3. Отправим 2 товара во входной топик
 В другом терминале:
-docker exec -i final-kafka-1-1 bash -lc '
+docker exec -it kafka-tools bash -lc '
 kafka-console-producer \
   --bootstrap-server kafka-1:1092 \
   --producer.config /etc/kafka/secrets/admin.properties \
@@ -202,6 +202,7 @@ BLOCKED: product_id="999" name="Запрещённые часы" (banned by prod
 
 
 
+docker exec -it kafka-tools bash
 kafka-console-consumer \
   --bootstrap-server kafka-1:1092 \
   --consumer.config /etc/kafka/secrets/admin.properties \
@@ -373,7 +374,7 @@ docker logs <container>
 
 
 
-
+docker exec -it kafka-tools bash
 kafka-topics \
   --bootstrap-server kafka-1:1092 \
   --command-config /etc/kafka/secrets/admin.properties \
@@ -423,7 +424,7 @@ kafka-console-consumer \
 
 
 
- docker exec -it kafka-destination bash
+ docker exec -it kafka-tools bash
 
   kafka-acls \
   --bootstrap-server kafka-destination:1096 \
@@ -444,7 +445,7 @@ kafka-console-consumer \
 
 
 
-docker exec -it final-kafka-1-1 bash
+docker exec -it kafka-tools bash
 
 kafka-acls \
   --bootstrap-server kafka-1:1092 \
@@ -465,7 +466,7 @@ kafka-acls \
   --group mirror-maker-group
 
 
-docker exec -it kafka-destination bash
+docker exec -it kafka-tools bash
 
 
 kafka-topics \
@@ -527,7 +528,7 @@ kafka-acls \
 
 docker restart mirror-maker
 
-docker exec -it kafka-destination bash
+docker exec -it kafka-tools bash
 
 kafka-console-consumer \
   --bootstrap-server kafka-destination:1096 \
@@ -665,7 +666,7 @@ root@db631664309a:/# hdfs dfs -cat /data/reco/dt=latest/part-* 2>/dev/null | hea
 
 Проверить, что рекомендации улетели в Kafka (recommendations-topic)
 
-@aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ docker exec -it kafka-destination bash -lc '
+@aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ docker exec -it kafka-tools bash -lc '
 kafka-topics \
   --bootstrap-server kafka-destination:1096 \
   --command-config /etc/kafka/secrets/admin.properties \
@@ -676,7 +677,7 @@ Topic: recommendations-topic    TopicId: FcZcecWGRCSTKYVyJlH1uA PartitionCount: 
         Topic: recommendations-topic    Partition: 1    Leader: 1       Replicas: 1     Isr: 1
         Topic: recommendations-topic    Partition: 2    Leader: 1       Replicas: 1     Isr: 1
 
-@aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ docker exec -it kafka-destination bash -lc '
+@aruzhansadakbayeva ➜ /workspaces/apache-kafka/final (final) $ docker exec -it kafka-tools bash -lc '
 kafka-run-class kafka.tools.GetOffsetShell \
   --broker-list kafka-destination:1096 \
   --command-config /etc/kafka/secrets/admin.properties \
@@ -687,7 +688,7 @@ recommendations-topic:1:0
 recommendations-topic:2:0
 
 
-docker exec -it kafka-destination bash -lc '
+docker exec -it kafka-tools bash -lc '
 kafka-console-consumer \
   --bootstrap-server kafka-destination:1096 \
   --consumer.config /etc/kafka/secrets/admin.properties \
