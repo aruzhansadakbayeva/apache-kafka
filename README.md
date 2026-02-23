@@ -1,4 +1,3 @@
 # Архитектура финального проекта
-![final4](https://github.com/user-attachments/assets/b9f53982-32ca-4d50-ae49-a11aceb8645d)
-
+![final5](https://github.com/user-attachments/assets/caebca1f-0239-40de-bca2-593141034f72)
 
