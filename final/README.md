@@ -1,3 +1,6 @@
+![final](https://github.com/user-attachments/assets/8d7dfc92-a992-41ad-97a9-0d29251b6beb)
+
+
 # Генерация сертификатов:
 chmod +x generate-certs.sh
 ./generate-certs.sh
