@@ -1,5 +1,5 @@
 # Архитектура финального проекта
-![final](https://github.com/user-attachments/assets/24acd78e-7952-4a85-8e9f-4fb28bcec3fe)
+![final4](https://github.com/user-attachments/assets/53908cea-6813-4dc0-98a3-48ea83203c85)
 
 # Генерация сертификатов:
 chmod +x generate-certs.sh
